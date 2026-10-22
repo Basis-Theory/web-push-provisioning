@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  release:
+    types: [released]
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  verify-provenance:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - name: Verify Tag Format and Master Ancestry
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Refusing to publish: tag '${RELEASE_TAG}' is not an exact vMAJOR.MINOR.PATCH tag"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
+            echo "Refusing to publish: release commit ${GITHUB_SHA} is not on master"
+            exit 1
+          fi
+
+  publish:
+    needs: verify-provenance
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # npm trusted publishing
+      contents: read
+    environment: PROD # must match the npm trusted publisher config exactly (case-sensitive)
+    env:
+      HUSKY: 0
+    steps:
+      - name: Mint semantic-release app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          app-id: ${{ vars.SEMANTIC_RELEASE_APP_ID }}
+          private-key: ${{ secrets.SEMANTIC_RELEASE_APP_PRIVATE_KEY }}
+
+      - name: Checkout Repo
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Start Deploy Message
+        uses: Basis-Theory/public-github-actions/deploy-slack-action@12362db6b1ad6b524d28c47a6489c3e73ecd656a # master
+        with:
+          slack-api-token: ${{ secrets.SLACK_DUCKBOT_API_KEY }}
+          channel: ${{ vars.SLACK_DUCKBOT_RELEASE_CHANNEL_ID }}
+
+      - name: Use Node 20
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '20.x'
+          cache: yarn
+          # registry-url is intentionally NOT set - it creates .npmrc that blocks OIDC
+
+      - name: Update npm for Trusted Publishing
+        run: npm install -g npm@11.18.0 # OIDC needs npm >= 11.5.1
+
+      - name: Install Deps
+        run: yarn install --frozen-lockfile --no-progress --ignore-scripts
+
+      - name: Pin Version to Release Tag
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: make update-version NEW_VERSION="${RELEASE_TAG#v}"
+
+      - name: Build
+        run: make build
+        env:
+          SKIP_INSTALL: 1
+
+      - name: Publish Package to NPM
+        run: npm publish --access public
+        working-directory: dist
+
+      - name: Commit Version to Repo
+        run: |
+          git config --local user.email "platform@basistheory.com"
+          git config --local user.name "github-actions[bot]"
+
+          VERSION=$(cat package.json | jq -r '.version')
+          git add package.json
+          git commit -m "chore(release): $VERSION [skip ci]"
+          git push origin HEAD:master
+
+      - name: Stop Deploy Message
+        if: always()
+        uses: Basis-Theory/public-github-actions/deploy-slack-action@12362db6b1ad6b524d28c47a6489c3e73ecd656a # master
+        with:
+          slack-api-token: ${{ secrets.SLACK_DUCKBOT_API_KEY }}
+          channel: ${{ vars.SLACK_DUCKBOT_RELEASE_CHANNEL_ID }}
+          status: "done"
