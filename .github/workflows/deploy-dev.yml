@@ -1,0 +1,111 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment: DEV
+    env:
+      HUSKY: 0
+    steps:
+      - name: Start Deploy Message
+        uses: Basis-Theory/public-github-actions/deploy-slack-action@12362db6b1ad6b524d28c47a6489c3e73ecd656a # master
+        with:
+          slack-api-token: ${{ secrets.SLACK_DUCKBOT_API_KEY }}
+          channel: ${{ vars.SLACK_DUCKBOT_DEV_DEPLOY_CHANNEL_ID }}
+
+      - name: Checkout Repo
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '20.x'
+          cache: yarn
+
+      - name: Install Deps
+        run: yarn install --frozen-lockfile --no-progress --ignore-scripts
+
+      - name: Get New Version
+        id: get-new-version
+        uses: mathieudutour/github-tag-action@a2505118dd9b4797d9f8d45747f562db67e2aa6c # v5.2
+        with:
+          dry_run: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump Version
+        run: make update-version NEW_VERSION=${{ steps.get-new-version.outputs.new_version }}
+
+      - name: Build
+        run: make build
+        env:
+          SKIP_INSTALL: 1
+
+  create-pre-release:
+    runs-on: ubuntu-latest
+    environment: TAG
+    needs:
+      - build
+    steps:
+      - name: Mint tag-app token
+        id: tag-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          app-id: ${{ vars.GH_TAG_APP_ID }}
+          private-key: ${{ secrets.GH_APP_TAG_KEY }}
+
+      - name: Version and Tag
+        id: version-and-tag
+        uses: mathieudutour/github-tag-action@a2505118dd9b4797d9f8d45747f562db67e2aa6c # v5.2
+        with:
+          github_token: ${{ steps.tag-token.outputs.token }}
+
+      - name: Generate Release Notes
+        id: release-notes
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          NEW_RELEASE_TAG: ${{ steps.version-and-tag.outputs.new_tag }}
+        with:
+          result-encoding: string
+          script: |
+            const { NEW_RELEASE_TAG } = process.env;
+            let previousTag;
+            try {
+              const latestRelease = await github.rest.repos.getLatestRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              });
+              previousTag = latestRelease.data.tag_name;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+            const releaseNotes = await github.rest.repos.generateReleaseNotes({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: NEW_RELEASE_TAG,
+              previous_tag_name: previousTag,
+            });
+            return releaseNotes.data.body;
+
+      - name: Create Pre-Release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          prerelease: true
+          generate_release_notes: false
+          body: ${{ steps.release-notes.outputs.result }}
+          tag_name: ${{ steps.version-and-tag.outputs.new_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Stop Deploy Message
+        if: always()
+        uses: Basis-Theory/public-github-actions/deploy-slack-action@12362db6b1ad6b524d28c47a6489c3e73ecd656a # master
+        with:
+          slack-api-token: ${{ secrets.SLACK_DUCKBOT_API_KEY }}
+          channel: ${{ vars.SLACK_DUCKBOT_DEV_DEPLOY_CHANNEL_ID }}
+          status: "done"
