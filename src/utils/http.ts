@@ -19,26 +19,31 @@ const resolveApiBaseUrlOverride = (options?: {
   return (region && REGIONAL_API_BASE_URLS[region]) || undefined;
 };
 
-const http = (() => {
-  let _apiKey: string;
-  let _baseUrl: string | undefined;
+type HttpClient = {
+  post: (
+    path: string,
+    body?: unknown,
+    correlationId?: string
+  ) => Promise<Response>;
+};
 
-  const client = async (
+const createHttpClient = (apiKey: string, baseUrl?: string): HttpClient => {
+  if (!apiKey) {
+    throw Error('Missing api key');
+  }
+
+  const request = async (
     method: string,
     path: string,
     body?: unknown,
     correlationId?: string
   ) => {
-    if (!_apiKey) {
-      throw Error('Missing api key');
-    }
-
-    if (_baseUrl) {
-      void logger.log.info(`Using custom api base url ${_baseUrl}`);
+    if (baseUrl) {
+      void logger.log.info(`Using custom api base url ${baseUrl}`);
     }
 
     const headers: Record<string, string> = {
-      [BT_API_KEY_HEADER_NAME]: _apiKey,
+      [BT_API_KEY_HEADER_NAME]: apiKey,
       'Content-Type': 'application/json',
     };
 
@@ -46,7 +51,7 @@ const http = (() => {
       headers[BT_CORRELATION_ID_HEADER_NAME] = correlationId;
     }
 
-    return await fetch(`${_baseUrl ?? API_BASE_URL}${path}`, {
+    return await fetch(`${baseUrl ?? API_BASE_URL}${path}`, {
       method,
       body: body === undefined ? undefined : JSON.stringify(body),
       headers,
@@ -54,13 +59,10 @@ const http = (() => {
   };
 
   return {
-    init: (apiKey: string, baseUrl?: string) => {
-      _apiKey = apiKey;
-      _baseUrl = baseUrl;
-    },
-    post: (path: string, body?: unknown, correlationId?: string) =>
-      client('POST', path, body, correlationId),
+    post: (path, body, correlationId) =>
+      request('POST', path, body, correlationId),
   };
-})();
+};
 
-export { http, resolveApiBaseUrlOverride };
+export { createHttpClient, resolveApiBaseUrlOverride };
+export type { HttpClient };

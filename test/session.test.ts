@@ -1,6 +1,6 @@
-import { http } from '~src/utils/http';
+import { createRequestEncryptedCardPayload } from '~src/session';
+import { createHttpClient } from '~src/utils/http';
 import { configureLogger } from '~src/utils/logging';
-import { requestEncryptedCardPayload } from '~src/session';
 
 const jsonResponse = (status: number, body: unknown) =>
   ({
@@ -11,12 +11,14 @@ const jsonResponse = (status: number, body: unknown) =>
 
 describe('requestEncryptedCardPayload', () => {
   const fetchMock = jest.fn<Promise<Response>, [string, RequestInit]>();
+  const requestEncryptedCardPayload = createRequestEncryptedCardPayload(
+    createHttpClient('key_test_123', 'https://api.flock-dev.com')
+  );
 
   beforeEach(() => {
     fetchMock.mockReset();
     global.fetch = fetchMock as unknown as typeof fetch;
     configureLogger({ disableTelemetry: true });
-    http.init('key_test_123', 'https://api.flock-dev.com');
   });
 
   it('posts the nonce and token id in snake_case and maps the response', async () => {

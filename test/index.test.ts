@@ -40,4 +40,40 @@ describe('BasisTheoryPushProvisioning', () => {
       BasisTheoryPushProvisioning
     );
   });
+
+  it('keeps credentials isolated between instances', async () => {
+    const fetchMock = jest
+      .fn<Promise<Response>, [string, RequestInit]>()
+      .mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ encrypted_card_payload: 'p' }),
+      } as Response);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const first = BasisTheoryPushProvisioning('key_first', {
+      apiBaseUrl: 'https://first.example',
+      disableTelemetry: true,
+    });
+    const second = BasisTheoryPushProvisioning('key_second', {
+      apiBaseUrl: 'https://second.example',
+      disableTelemetry: true,
+    });
+
+    await first.requestEncryptedCardPayload({ nonce: 'n', tokenId: 't' });
+    await second.requestEncryptedCardPayload({ nonce: 'n', tokenId: 't' });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://first.example/push-provisioning'
+    );
+    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
+      'BT-API-KEY': 'key_first',
+    });
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      'https://second.example/push-provisioning'
+    );
+    expect(fetchMock.mock.calls[1][1].headers).toMatchObject({
+      'BT-API-KEY': 'key_second',
+    });
+  });
 });

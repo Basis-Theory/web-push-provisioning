@@ -5,8 +5,11 @@ import {
   VISA_SDK_GLOBAL_NAME,
 } from '~src/constants';
 import { loadScript } from '~src/handlers/loadScript';
-import { requestEncryptedCardPayload } from '~src/session';
-import { http, resolveApiBaseUrlOverride } from '~src/utils/http';
+import { createRequestEncryptedCardPayload } from '~src/session';
+import {
+  createHttpClient,
+  resolveApiBaseUrlOverride,
+} from '~src/utils/http';
 import { configureLogger } from '~src/utils/logging';
 
 declare global {
@@ -46,7 +49,10 @@ const BasisTheoryPushProvisioning = (
     disableTelemetry: configOptions?.disableTelemetry ?? false,
   });
 
-  http.init(apiKey, resolveApiBaseUrlOverride(configOptions));
+  const http = createHttpClient(
+    apiKey,
+    resolveApiBaseUrlOverride(configOptions)
+  );
 
   const environment: Environment = configOptions?.environment ?? 'sandbox';
 
@@ -56,7 +62,7 @@ const BasisTheoryPushProvisioning = (
       loadScript(resolveVisaSdkUrl(appId, { ...configOptions, environment }), {
         globalName: VISA_SDK_GLOBAL_NAME,
       }),
-    requestEncryptedCardPayload,
+    requestEncryptedCardPayload: createRequestEncryptedCardPayload(http),
   };
 };
 
