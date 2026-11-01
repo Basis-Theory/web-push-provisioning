@@ -29,11 +29,26 @@ describe('loadScript', () => {
     await expect(pending).resolves.toEqual({ ready: true });
   });
 
-  it('resolves immediately when the global already exists', async () => {
+  it('reuses the global when the same script url is already on the page', async () => {
+    const tag = document.createElement('script');
+    tag.src = url;
+    document.head.appendChild(tag);
     (window as unknown as Record<string, unknown>)[globalName] = 'loaded';
 
     await expect(loadScript(url, { globalName })).resolves.toBe('loaded');
-    expect(scripts()).toEqual([]);
+    expect(scripts()).toEqual([url]);
+  });
+
+  it('rejects when the global was defined by a different script url', async () => {
+    const tag = document.createElement('script');
+    tag.src = 'https://sandbox.test/sdk.js?appId=abc';
+    document.head.appendChild(tag);
+    (window as unknown as Record<string, unknown>)[globalName] = 'sandbox';
+
+    await expect(loadScript(url, { globalName })).rejects.toThrow(
+      `${globalName} is already defined by a different script`
+    );
+    expect(scripts()).toEqual(['https://sandbox.test/sdk.js?appId=abc']);
   });
 
   it('rejects when the script loads without defining the global', async () => {

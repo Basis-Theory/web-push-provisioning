@@ -12,7 +12,17 @@ export const loadScript = (
   new Promise((resolve, reject) => {
     const existing = (window as unknown as Record<string, unknown>)[globalName];
     if (existing !== undefined) {
-      resolve(existing);
+      const loadedFromUrl = Array.from(
+        document.querySelectorAll<HTMLScriptElement>('script[src]')
+      ).some((tag) => tag.src === url);
+
+      if (loadedFromUrl) {
+        resolve(existing);
+      } else {
+        reject(
+          new Error(`${globalName} is already defined by a different script`)
+        );
+      }
       return;
     }
 

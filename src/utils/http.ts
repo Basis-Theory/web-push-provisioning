@@ -4,7 +4,7 @@ import {
   BT_CORRELATION_ID_HEADER_NAME,
   REGIONAL_API_BASE_URLS,
 } from '~src/constants';
-import { logger } from './logging';
+import type { Logger } from './logging';
 
 const resolveApiBaseUrlOverride = (options?: {
   apiBaseUrl?: string;
@@ -27,7 +27,11 @@ type HttpClient = {
   ) => Promise<Response>;
 };
 
-const createHttpClient = (apiKey: string, baseUrl?: string): HttpClient => {
+const createHttpClient = (
+  apiKey: string,
+  logger: Logger,
+  baseUrl?: string
+): HttpClient => {
   if (!apiKey) {
     throw Error('Missing api key');
   }

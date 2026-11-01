@@ -1,19 +1,25 @@
 type AttributeMap = Record<string, string>;
 
-let disableTelemetry = false;
-
-export const configureLogger = ({
-  disableTelemetry: disableTelemetryArg,
-}: {
-  disableTelemetry: boolean;
-}) => {
-  disableTelemetry = disableTelemetryArg;
+type Logger = {
+  log: {
+    error: (
+      message: string,
+      error?: Error,
+      attributes?: AttributeMap
+    ) => Promise<void>;
+    info: (message: string, attributes?: AttributeMap) => Promise<void>;
+    warn: (message: string, attributes?: AttributeMap) => Promise<void>;
+  };
 };
 
-export const logger = (() => {
-  const ddTok = 'pubb96b84a13912504f4354f2d794ea4fab';
-  const service = 'web-push-provisioning';
+const DD_CLIENT_TOKEN = 'pubb96b84a13912504f4354f2d794ea4fab';
+const SERVICE = 'web-push-provisioning';
 
+const createLogger = ({
+  disableTelemetry,
+}: {
+  disableTelemetry: boolean;
+}): Logger => {
   const log = async (
     message: string,
     level: string,
@@ -25,9 +31,9 @@ export const logger = (() => {
     }
 
     const payload = {
-      application: service,
-      ddsource: service,
-      service,
+      application: SERVICE,
+      ddsource: SERVICE,
+      service: SERVICE,
       ...attributes,
       level,
       message:
@@ -36,7 +42,7 @@ export const logger = (() => {
 
     try {
       const response = await fetch(
-        `https://http-intake.logs.datadoghq.com/v1/input/${ddTok}`,
+        `https://http-intake.logs.datadoghq.com/v1/input/${DD_CLIENT_TOKEN}`,
         {
           method: 'POST',
           body: JSON.stringify(payload),
@@ -56,12 +62,15 @@ export const logger = (() => {
 
   return {
     log: {
-      error: (message: string, error?: Error, attributes?: AttributeMap) =>
+      error: (message, error, attributes) =>
         log(message, 'error', error, attributes),
-      info: (message: string, attributes?: AttributeMap) =>
+      info: (message, attributes) =>
         log(message, 'info', undefined, attributes),
-      warn: (message: string, attributes?: AttributeMap) =>
+      warn: (message, attributes) =>
         log(message, 'warn', undefined, attributes),
     },
   };
-})();
+};
+
+export { createLogger };
+export type { Logger };

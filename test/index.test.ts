@@ -76,4 +76,29 @@ describe('BasisTheoryPushProvisioning', () => {
       'BT-API-KEY': 'key_second',
     });
   });
+
+  it('keeps the telemetry opt-out isolated between instances', async () => {
+    const fetchMock = jest
+      .fn<Promise<Response>, [string, RequestInit]>()
+      .mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ encrypted_card_payload: 'p' }),
+      } as Response);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const quiet = BasisTheoryPushProvisioning('key_quiet', {
+      apiBaseUrl: 'https://quiet.example',
+      disableTelemetry: true,
+    });
+    BasisTheoryPushProvisioning('key_loud', {
+      apiBaseUrl: 'https://loud.example',
+      disableTelemetry: false,
+    });
+
+    await quiet.requestEncryptedCardPayload({ nonce: 'n', tokenId: 't' });
+
+    const urls = fetchMock.mock.calls.map(([u]) => u);
+    expect(urls).toEqual(['https://quiet.example/push-provisioning']);
+  });
 });

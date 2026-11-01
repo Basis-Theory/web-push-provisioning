@@ -6,11 +6,8 @@ import {
 } from '~src/constants';
 import { loadScript } from '~src/handlers/loadScript';
 import { createRequestEncryptedCardPayload } from '~src/session';
-import {
-  createHttpClient,
-  resolveApiBaseUrlOverride,
-} from '~src/utils/http';
-import { configureLogger } from '~src/utils/logging';
+import { createHttpClient, resolveApiBaseUrlOverride } from '~src/utils/http';
+import { createLogger } from '~src/utils/logging';
 
 declare global {
   interface Window {
@@ -45,12 +42,13 @@ const BasisTheoryPushProvisioning = (
   apiKey: string,
   configOptions?: ConfigOptions
 ) => {
-  configureLogger({
+  const logger = createLogger({
     disableTelemetry: configOptions?.disableTelemetry ?? false,
   });
 
   const http = createHttpClient(
     apiKey,
+    logger,
     resolveApiBaseUrlOverride(configOptions)
   );
 
