@@ -87,7 +87,9 @@
   },
   "alias": {},
   "resolutions": {
-    "cliui": "^8.0.1"
+    "cliui": "^8.0.1",
+    "eslint-config-get-off-my-lawn/semver": "^7.7.3",
+    "npm": "^11.21.1"
   },
   "engines": {
     "node": ">=18.x"
