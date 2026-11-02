@@ -1,6 +1,6 @@
 {
   "name": "@basis-theory/web-push-provisioning",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Browser SDK for Basis Theory wallet push provisioning (Visa Digital Enablement SDK wrapper)",
   "repository": "https://github.com/Basis-Theory/web-push-provisioning",
   "license": "Apache-2.0",
