@@ -41,5 +41,5 @@ jobs:
 
   pr-security-check:
     name: PR Security Check
-    uses: Basis-Theory/public-security-workflows/.github/workflows/pr-check.yml@1c4c50f381f092a48dbb8dfd7340dcd451653688 # master
+    uses: Basis-Theory/public-security-workflows/.github/workflows/pr-check.yml@master
     secrets: inherit

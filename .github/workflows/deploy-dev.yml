@@ -14,7 +14,7 @@ jobs:
       HUSKY: 0
     steps:
       - name: Start Deploy Message
-        uses: Basis-Theory/public-github-actions/deploy-slack-action@12362db6b1ad6b524d28c47a6489c3e73ecd656a # master
+        uses: Basis-Theory/public-github-actions/deploy-slack-action@master
         with:
           slack-api-token: ${{ secrets.SLACK_DUCKBOT_API_KEY }}
           channel: ${{ vars.SLACK_DUCKBOT_DEV_DEPLOY_CHANNEL_ID }}
@@ -104,7 +104,7 @@ jobs:
 
       - name: Stop Deploy Message
         if: always()
-        uses: Basis-Theory/public-github-actions/deploy-slack-action@12362db6b1ad6b524d28c47a6489c3e73ecd656a # master
+        uses: Basis-Theory/public-github-actions/deploy-slack-action@master
         with:
           slack-api-token: ${{ secrets.SLACK_DUCKBOT_API_KEY }}
           channel: ${{ vars.SLACK_DUCKBOT_DEV_DEPLOY_CHANNEL_ID }}
