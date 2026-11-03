@@ -314,7 +314,8 @@
       return config;
     },
     get config() {
-      return config;
+      const { signatureSecret, ...visible } = config;
+      return visible;
     },
   };
 

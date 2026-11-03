@@ -24,7 +24,11 @@ type MockSdk = {
   };
 };
 type MockFactory = ((options?: { onError?: (e: Error) => void }) => MockSdk) & {
-  mock: { configure: (c: object) => void; reset: () => void };
+  mock: {
+    configure: (c: object) => void;
+    reset: () => void;
+    config: Record<string, unknown>;
+  };
 };
 
 const secret = 'test-signature-secret';
@@ -125,6 +129,7 @@ describe('mock Visa web SDK', () => {
       APPLE: 'APPLE',
       GOOGLE: 'GOOGLE',
     });
+    expect(WebSDK.mock.config).not.toHaveProperty('signatureSecret');
   });
 
   it('issues a nonce the payload API verifies with the signature secret', async () => {

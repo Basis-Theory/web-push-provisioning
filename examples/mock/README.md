@@ -4,12 +4,7 @@
 
 ## Where it is served
 
-| Environment | URL                                                                        |
-| ----------- | -------------------------------------------------------------------------- |
-| dev         | `https://cdn.flock-dev.com/javascript/push-provisioning/mock/web_sdk.js`   |
-| uat         | `https://cdn.basistheory.com/javascript/push-provisioning/mock/web_sdk.js` |
-
-Both URLs are exported from the package as `VISA_SDK_MOCK_URLS`. Pass one as `visaSdkUrl` to make the wrapper load the mock instead of Visa's script. The deployed copy lives in the `cdn.basistheory.com` repository under `javascript/push-provisioning/mock/`; update it alongside this file.
+`https://cdn.flock-dev.com/javascript/push-provisioning/mock/web_sdk.js`, exported from the package as `VISA_SDK_MOCK_URL`. Dev and UAT integrations both load it from the dev CDN; the production CDN never carries it. Pass the URL as `visaSdkUrl` to make the wrapper load the mock instead of Visa's script. The deployed copy lives in the `cdn.basistheory.com` repository under `dev/javascript/push-provisioning/mock/`; update it alongside this file.
 
 ## Configuration
 
@@ -22,7 +17,7 @@ The mock never ships a secret. Set the tenant's test Signature Secret from the p
 </script>
 ```
 
-`WebSDKMockConfig`, when defined before the script loads, is read as the initial configuration. `WebSDK.mock.reset()` restores the defaults.
+`WebSDKMockConfig`, when defined before the script loads, is read as the initial configuration. `WebSDK.mock.reset()` restores the defaults. `WebSDK.mock.config` reports the current options without the secret. Use a dedicated test secret on a TEST tenant only: any script on the page can mint nonces for it.
 
 | Option            | Default                                   | Purpose                                                                                                     |
 | ----------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
