@@ -20,4 +20,9 @@ export const VISA_SDK_BASE_URLS: Record<Environment, string> = {
   production: 'https://js.digitalcardservice.com/web-sdk/V1/web_sdk.js',
 };
 
+export const VISA_SDK_MOCK_URLS = {
+  dev: 'https://cdn.flock-dev.com/javascript/push-provisioning/mock/web_sdk.js',
+  uat: 'https://cdn.basistheory.com/javascript/push-provisioning/mock/web_sdk.js',
+} as const;
+
 export const VISA_SDK_GLOBAL_NAME = 'WebSDK';

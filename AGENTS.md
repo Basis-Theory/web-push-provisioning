@@ -24,6 +24,7 @@ Always verify fixes with targeted tests before considering done.
 - `src/utils/` — HTTP client, logging, error mapping
 - `test/` — Unit tests (Jest + jsdom)
 - `examples/` — Integration samples
+- `examples/mock/web_sdk.js` — Mock Visa web SDK served from the dev and UAT CDN (deployed copy lives in `cdn.basistheory.com` under `javascript/push-provisioning/mock/`)
 - `scripts/prepare.js` — Creates dist/package.json before the Parcel build
 
 ## Gotchas

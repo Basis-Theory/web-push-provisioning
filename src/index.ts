@@ -69,6 +69,7 @@ if (typeof window !== 'undefined') {
 }
 
 export { BasisTheoryPushProvisioning };
+export { VISA_SDK_MOCK_URLS } from '~src/constants';
 export type { Environment } from '~src/constants';
 export type {
   EncryptedCardPayloadRequest,
