@@ -10,6 +10,7 @@ import {
 } from '~src/handlers/results';
 import {
   VisaSdkAdapter,
+  VisaSupportedWallet,
   VisaWalletSetup,
   VisaWalletSetupOptions,
 } from '~src/handlers/visaSdk';
@@ -142,14 +143,17 @@ export const createWalletFlow = ({
   let adapter: VisaSdkAdapter | undefined;
   let renderedContainerId: string | undefined;
   let session: Session | undefined;
+  let initialized = false;
   let unloadListenerAttached = false;
 
   const logout = async (): Promise<void> => {
-    if (!session) {
+    session = undefined;
+
+    if (!initialized) {
       return;
     }
 
-    session = undefined;
+    initialized = false;
 
     try {
       await adapter?.logout();
@@ -257,13 +261,23 @@ export const createWalletFlow = ({
     attachUnloadListener();
 
     const nonce = await sdk.initialize();
-    const { encryptedCardPayload } = await requestEncryptedCardPayload({
-      nonce,
-      tokenId: cardTokenId,
-      correlationId: options.correlationId,
-    });
+    initialized = true;
 
-    const supported = await sdk.getSupportedWallets(encryptedCardPayload);
+    let encryptedCardPayload: string;
+    let supported: VisaSupportedWallet[];
+
+    try {
+      ({ encryptedCardPayload } = await requestEncryptedCardPayload({
+        nonce,
+        tokenId: cardTokenId,
+        correlationId: options.correlationId,
+      }));
+      supported = await sdk.getSupportedWallets(encryptedCardPayload);
+    } catch (error) {
+      await logout();
+      throw error;
+    }
+
     const current: Session = { encryptedCardPayload, setups: new Map() };
     session = current;
 

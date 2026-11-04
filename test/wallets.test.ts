@@ -65,6 +65,26 @@ describe('wallet flow against the mock Visa web SDK', () => {
     await tick();
   };
 
+  // Wraps the mock factory so a test can observe the instance the wrapper
+  // creates; restore() puts the real factory back.
+  const captureSdk = () => {
+    const real = WebSDK;
+    const instances: ReturnType<VisaWebSdkFactory>[] = [];
+    const capturing: VisaWebSdkFactory = (options) => {
+      const sdk = real(options);
+      instances.push(sdk);
+      return sdk;
+    };
+    (window as unknown as { WebSDK: unknown }).WebSDK = capturing;
+
+    return {
+      instances,
+      restore: () => {
+        (window as unknown as { WebSDK: unknown }).WebSDK = real;
+      },
+    };
+  };
+
   it('exchanges the nonce for a payload and returns both wallets with handlers', async () => {
     const bt = client();
 
@@ -140,21 +160,17 @@ describe('wallet flow against the mock Visa web SDK', () => {
   });
 
   it('passes the Google options and button id to the Visa SDK', async () => {
-    const real = WebSDK;
-    const setups: unknown[] = [];
-    const capturing: VisaWebSdkFactory = (options) => {
-      const sdk = real(options);
-      const { setupPushProvisionSDK } = sdk.pushProvisioningSdk;
-      sdk.pushProvisioningSdk.setupPushProvisionSDK = (payload, wallets) => {
-        setups.push(wallets);
-        return setupPushProvisionSDK(payload, wallets);
-      };
-      return sdk;
-    };
-    (window as unknown as { WebSDK: unknown }).WebSDK = capturing;
+    const captured = captureSdk();
 
     try {
       const { googleWallet } = await client().getSupportedWallets('t');
+      const setups: unknown[] = [];
+      const sdk = captured.instances[0].pushProvisioningSdk;
+      const { setupPushProvisionSDK } = sdk;
+      sdk.setupPushProvisionSDK = (payload, wallets) => {
+        setups.push(wallets);
+        return setupPushProvisionSDK(payload, wallets);
+      };
 
       await expect(
         googleWallet!({
@@ -184,7 +200,35 @@ describe('wallet flow against the mock Visa web SDK', () => {
         ],
       ]);
     } finally {
-      (window as unknown as { WebSDK: unknown }).WebSDK = real;
+      captured.restore();
+    }
+  });
+
+  it('logs out of Visa when the payload exchange fails after initialize', async () => {
+    const captured = captureSdk();
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: () => Promise.resolve({}),
+    } as Response);
+
+    try {
+      const bt = client();
+      await expect(bt.getSupportedWallets('t')).rejects.toThrow(
+        'Payload request failed'
+      );
+
+      const sdk = captured.instances[0];
+      await expect(
+        sdk.pushProvisioningSdk.getSupportedWallets('payload')
+      ).rejects.toMatchObject({ code: 'VW_ERROR_427' });
+
+      fetchMock.mockResolvedValue(payloadResponse('p'));
+      await expect(bt.getSupportedWallets('t')).resolves.toMatchObject({
+        wallets: expect.any(Array) as unknown,
+      });
+    } finally {
+      captured.restore();
     }
   });
 
