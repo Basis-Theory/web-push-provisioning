@@ -147,6 +147,16 @@ export const createWalletFlow = ({
   let generation = 0;
   let unloadListenerAttached = false;
 
+  const logoutVisa = async () => {
+    try {
+      await adapter?.logout();
+    } catch (error) {
+      void logger.log.warn(
+        `Visa web SDK logout failed: ${(error as Error).message}`
+      );
+    }
+  };
+
   const logout = async (): Promise<void> => {
     session = undefined;
 
@@ -155,14 +165,7 @@ export const createWalletFlow = ({
     }
 
     initialized = false;
-
-    try {
-      await adapter?.logout();
-    } catch (error) {
-      void logger.log.warn(
-        `Visa web SDK logout failed: ${(error as Error).message}`
-      );
-    }
+    await logoutVisa();
   };
 
   const attachUnloadListener = () => {
@@ -272,6 +275,11 @@ export const createWalletFlow = ({
     const nonce = await sdk.initialize();
 
     if (generation !== mine) {
+      // A newer call that already initialized owns the session; otherwise
+      // this initialize left Visa with a session nobody tracks.
+      if (!initialized) {
+        await logoutVisa();
+      }
       throw superseded();
     }
 

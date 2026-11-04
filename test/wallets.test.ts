@@ -277,6 +277,43 @@ describe('wallet flow against the mock Visa web SDK', () => {
     await expect(pending).resolves.toMatchObject({ success: true });
   });
 
+  it('logs out a superseded call whose initialize finished after the newer call failed', async () => {
+    const captured = captureSdk();
+    const real = (window as unknown as { WebSDK: VisaWebSdkFactory }).WebSDK;
+    // Resolves with a function that lets the deferred initialize() finish,
+    // once the older call has actually reached it.
+    const initializeStarted = new Promise<() => void>((started) => {
+      (window as unknown as { WebSDK: unknown }).WebSDK = ((options) => {
+        const sdk = real(options);
+        const { initialize } = sdk;
+        sdk.initialize = () =>
+          new Promise<void>((resolve) => started(resolve)).then(() =>
+            initialize.call(sdk)
+          );
+        return sdk;
+      }) as VisaWebSdkFactory;
+    });
+
+    try {
+      const bt = client();
+      const older = bt.getSupportedWallets('t');
+      const finishInitialize = await initializeStarted;
+      await expect(
+        bt.getSupportedWallets('t', { containerId: 'missing' })
+      ).rejects.toThrow('was not found');
+
+      finishInitialize();
+      await expect(older).rejects.toThrow('called again before');
+
+      const sdk = captured.instances[0];
+      await expect(
+        sdk.pushProvisioningSdk.getSupportedWallets('payload')
+      ).rejects.toMatchObject({ code: 'VW_ERROR_427' });
+    } finally {
+      captured.restore();
+    }
+  });
+
   it('maps a partial Google result', async () => {
     const bt = client();
     const { googleWallet } = await bt.getSupportedWallets('t');
