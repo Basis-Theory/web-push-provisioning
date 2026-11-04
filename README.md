@@ -22,13 +22,34 @@ const bt = BasisTheoryPushProvisioning('<SESSION_OR_PUBLIC_API_KEY>', {
 
 ### Options
 
-| Option             | Description                                                                 |
-| ------------------ | --------------------------------------------------------------------------- |
-| `environment`      | `sandbox` (default) or `production`; selects the Visa-hosted script.        |
-| `apiBaseUrl`       | Overrides the Basis Theory API host.                                        |
-| `region`           | `us` or `eu`; selects a regional API host. `apiBaseUrl` takes precedence.   |
-| `visaSdkUrl`       | Overrides the Visa script URL, for example to point at a local mock.        |
-| `disableTelemetry` | Disables SDK telemetry.                                                     |
+| Option             | Description                                                               |
+| ------------------ | ------------------------------------------------------------------------- |
+| `environment`      | `sandbox` (default) or `production`; selects the Visa-hosted script.      |
+| `apiBaseUrl`       | Overrides the Basis Theory API host.                                      |
+| `region`           | `us` or `eu`; selects a regional API host. `apiBaseUrl` takes precedence. |
+| `visaSdkUrl`       | Overrides the Visa script URL, for example to point at a local mock.      |
+| `disableTelemetry` | Disables SDK telemetry.                                                   |
+
+### Mock Visa SDK for dev and UAT
+
+Until Visa provisions an AppID, the dev CDN serves a mock of the Visa script that issues real HS256 nonces signed with the tenant's test Signature Secret. Dev and UAT integrations both load it from there. Point the wrapper at it with `visaSdkUrl` and configure the secret from the page:
+
+```typescript
+import {
+  BasisTheoryPushProvisioning,
+  VISA_SDK_MOCK_URL,
+} from '@basis-theory/web-push-provisioning';
+
+const bt = BasisTheoryPushProvisioning('<PUBLIC_API_KEY>', {
+  visaSdkUrl: VISA_SDK_MOCK_URL,
+});
+await bt.loadVisaSdk('mock');
+window.WebSDK.mock.configure({
+  signatureSecret: '<tenant test signature secret>',
+});
+```
+
+See [`examples/mock/README.md`](examples/mock/README.md) for the scenarios and options.
 
 ## Prerequisites
 
