@@ -232,17 +232,21 @@ describe('wallet flow against the mock Visa web SDK', () => {
     }
   });
 
+  // Resolves with the deferred fetch's resolver once the wrapper actually
+  // calls fetch, so the older call is known to be past initialize().
+  const deferNextFetch = () =>
+    new Promise<(response: Response) => void>((started) => {
+      fetchMock.mockImplementationOnce(
+        () => new Promise<Response>((resolve) => started(resolve))
+      );
+    });
+
   it('keeps the newer session when an older overlapping call fails', async () => {
-    let failOlder: (response: Response) => void = () => undefined;
-    fetchMock.mockReturnValueOnce(
-      new Promise<Response>((resolve) => {
-        failOlder = resolve;
-      })
-    );
+    const olderFetch = deferNextFetch();
     const bt = client();
 
     const older = bt.getSupportedWallets('t');
-    await tick();
+    const failOlder = await olderFetch;
     const newer = await bt.getSupportedWallets('t');
 
     failOlder({
@@ -258,16 +262,11 @@ describe('wallet flow against the mock Visa web SDK', () => {
   });
 
   it('rejects an older overlapping call that would otherwise win', async () => {
-    let finishOlder: (response: Response) => void = () => undefined;
-    fetchMock.mockReturnValueOnce(
-      new Promise<Response>((resolve) => {
-        finishOlder = resolve;
-      })
-    );
+    const olderFetch = deferNextFetch();
     const bt = client();
 
     const older = bt.getSupportedWallets('t');
-    await tick();
+    const finishOlder = await olderFetch;
     const newer = await bt.getSupportedWallets('t');
     finishOlder(payloadResponse('late'));
 
