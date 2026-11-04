@@ -2,26 +2,44 @@ import { BasisTheoryPushProvisioning, resolveVisaSdkUrl } from '~src/index';
 
 describe('resolveVisaSdkUrl', () => {
   it('defaults to the sandbox script', () => {
-    expect(resolveVisaSdkUrl('app 1')).toBe(
+    expect(resolveVisaSdkUrl({ appId: 'app 1' })).toBe(
       'https://sbx.digitalcardservice.com/web-sdk/V1/web_sdk.js?appId=app%201'
     );
   });
 
   it('selects the production script', () => {
-    expect(resolveVisaSdkUrl('app', { environment: 'production' })).toBe(
+    expect(resolveVisaSdkUrl({ appId: 'app', environment: 'production' })).toBe(
       'https://js.digitalcardservice.com/web-sdk/V1/web_sdk.js?appId=app'
     );
   });
 
-  it('allows a custom script url for mocks', () => {
+  it('selects the mock without requiring an app id', () => {
+    expect(resolveVisaSdkUrl({ environment: 'mock' })).toBe(
+      'https://cdn.flock-dev.com/javascript/push-provisioning/mock/web_sdk.js'
+    );
+  });
+
+  it('allows a custom script url', () => {
     expect(
-      resolveVisaSdkUrl('app', { visaSdkUrl: 'http://localhost:4000/sdk.js' })
+      resolveVisaSdkUrl({
+        appId: 'app',
+        visaSdkUrl: 'http://localhost:4000/sdk.js',
+      })
     ).toBe('http://localhost:4000/sdk.js?appId=app');
+    expect(
+      resolveVisaSdkUrl({ visaSdkUrl: 'http://localhost:4000/sdk.js' })
+    ).toBe('http://localhost:4000/sdk.js');
+  });
+
+  it('requires an app id for the Visa-hosted scripts', () => {
+    expect(() => resolveVisaSdkUrl({ environment: 'production' })).toThrow(
+      'appId is required for the production environment'
+    );
   });
 
   it('rejects unknown environments', () => {
     expect(() =>
-      resolveVisaSdkUrl('app', { environment: 'staging' as never })
+      resolveVisaSdkUrl({ appId: 'app', environment: 'staging' as never })
     ).toThrow('Unknown environment staging');
   });
 });
@@ -30,75 +48,28 @@ describe('BasisTheoryPushProvisioning', () => {
   it('exposes the configured environment and the client surface', () => {
     const sdk = BasisTheoryPushProvisioning('key_test', {
       environment: 'production',
+      appId: 'app',
       disableTelemetry: true,
     });
 
     expect(sdk.environment).toBe('production');
     expect(typeof sdk.loadVisaSdk).toBe('function');
-    expect(typeof sdk.requestEncryptedCardPayload).toBe('function');
+    expect(typeof sdk.getSupportedWallets).toBe('function');
+    expect(typeof sdk.logout).toBe('function');
     expect(window.BasisTheoryPushProvisioning).toBe(
       BasisTheoryPushProvisioning
     );
   });
 
-  it('keeps credentials isolated between instances', async () => {
-    const fetchMock = jest
-      .fn<Promise<Response>, [string, RequestInit]>()
-      .mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ encrypted_card_payload: 'p' }),
-      } as Response);
-    global.fetch = fetchMock as unknown as typeof fetch;
-
-    const first = BasisTheoryPushProvisioning('key_first', {
-      apiBaseUrl: 'https://first.example',
-      disableTelemetry: true,
-    });
-    const second = BasisTheoryPushProvisioning('key_second', {
-      apiBaseUrl: 'https://second.example',
-      disableTelemetry: true,
-    });
-
-    await first.requestEncryptedCardPayload({ nonce: 'n', tokenId: 't' });
-    await second.requestEncryptedCardPayload({ nonce: 'n', tokenId: 't' });
-
-    expect(fetchMock.mock.calls[0][0]).toBe(
-      'https://first.example/push-provisioning'
-    );
-    expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
-      'BT-API-KEY': 'key_first',
-    });
-    expect(fetchMock.mock.calls[1][0]).toBe(
-      'https://second.example/push-provisioning'
-    );
-    expect(fetchMock.mock.calls[1][1].headers).toMatchObject({
-      'BT-API-KEY': 'key_second',
-    });
+  it('rejects an empty api key', () => {
+    expect(() => BasisTheoryPushProvisioning('')).toThrow('Missing api key');
   });
 
-  it('keeps the telemetry opt-out isolated between instances', async () => {
-    const fetchMock = jest
-      .fn<Promise<Response>, [string, RequestInit]>()
-      .mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ encrypted_card_payload: 'p' }),
-      } as Response);
-    global.fetch = fetchMock as unknown as typeof fetch;
-
-    const quiet = BasisTheoryPushProvisioning('key_quiet', {
-      apiBaseUrl: 'https://quiet.example',
+  it('fails the script load when the app id is missing', async () => {
+    const sdk = BasisTheoryPushProvisioning('key_test', {
       disableTelemetry: true,
     });
-    BasisTheoryPushProvisioning('key_loud', {
-      apiBaseUrl: 'https://loud.example',
-      disableTelemetry: false,
-    });
 
-    await quiet.requestEncryptedCardPayload({ nonce: 'n', tokenId: 't' });
-
-    const urls = fetchMock.mock.calls.map(([u]) => u);
-    expect(urls).toEqual(['https://quiet.example/push-provisioning']);
+    await expect(sdk.loadVisaSdk()).rejects.toThrow('appId is required');
   });
 });
