@@ -144,6 +144,7 @@ export const createWalletFlow = ({
   let renderedContainerId: string | undefined;
   let session: Session | undefined;
   let initialized = false;
+  let generation = 0;
   let unloadListenerAttached = false;
 
   const logout = async (): Promise<void> => {
@@ -256,11 +257,24 @@ export const createWalletFlow = ({
       throw new Error('cardTokenId is required');
     }
 
+    // Guards against overlapping calls: only the newest invocation may own
+    // the Visa session or tear it down.
+    const mine = ++generation;
+    const superseded = () =>
+      new Error(
+        'getSupportedWallets was called again before this call completed'
+      );
+
     await logout();
     const sdk = await ensureRendered(options.containerId);
     attachUnloadListener();
 
     const nonce = await sdk.initialize();
+
+    if (generation !== mine) {
+      throw superseded();
+    }
+
     initialized = true;
 
     let encryptedCardPayload: string;
@@ -274,8 +288,14 @@ export const createWalletFlow = ({
       }));
       supported = await sdk.getSupportedWallets(encryptedCardPayload);
     } catch (error) {
-      await logout();
+      if (generation === mine) {
+        await logout();
+      }
       throw error;
+    }
+
+    if (generation !== mine) {
+      throw superseded();
     }
 
     const current: Session = { encryptedCardPayload, setups: new Map() };

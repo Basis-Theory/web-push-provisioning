@@ -232,6 +232,52 @@ describe('wallet flow against the mock Visa web SDK', () => {
     }
   });
 
+  it('keeps the newer session when an older overlapping call fails', async () => {
+    let failOlder: (response: Response) => void = () => undefined;
+    fetchMock.mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        failOlder = resolve;
+      })
+    );
+    const bt = client();
+
+    const older = bt.getSupportedWallets('t');
+    await tick();
+    const newer = await bt.getSupportedWallets('t');
+
+    failOlder({
+      ok: false,
+      status: 502,
+      json: () => Promise.resolve({}),
+    } as Response);
+    await expect(older).rejects.toThrow('Payload request failed');
+
+    const pending = newer.appleWallet!();
+    await click('add-to-apple-wallet-button');
+    await expect(pending).resolves.toMatchObject({ success: true });
+  });
+
+  it('rejects an older overlapping call that would otherwise win', async () => {
+    let finishOlder: (response: Response) => void = () => undefined;
+    fetchMock.mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        finishOlder = resolve;
+      })
+    );
+    const bt = client();
+
+    const older = bt.getSupportedWallets('t');
+    await tick();
+    const newer = await bt.getSupportedWallets('t');
+    finishOlder(payloadResponse('late'));
+
+    await expect(older).rejects.toThrow('called again before');
+
+    const pending = newer.googleWallet!();
+    await click('add-to-google-wallet-button');
+    await expect(pending).resolves.toMatchObject({ success: true });
+  });
+
   it('maps a partial Google result', async () => {
     const bt = client();
     const { googleWallet } = await bt.getSupportedWallets('t');
