@@ -18,18 +18,24 @@ Always verify fixes with targeted tests before considering done.
 ## Project Structure
 
 - `src/index.ts` — Public factory `BasisTheoryPushProvisioning(apiKey, options)`
+- `src/wallets.ts` — `getSupportedWallets` session flow, per-wallet handlers, logout
 - `src/session.ts` — Nonce and payload exchange with `POST /push-provisioning`
-- `src/handlers/` — Visa script loading and SDK call handlers
+- `src/handlers/visaSdk.ts` — Adapter seam over the Visa `WebSDK` global (mock or live); the only place that knows where Visa's methods live
+- `src/handlers/results.ts` — Visa result code to `ProvisioningResult` mapping
+- `src/handlers/loadScript.ts` — Script injection that waits for the global
 - `src/constants.ts` — API hosts, Visa script URLs, header names
 - `src/utils/` — HTTP client, logging, error mapping
 - `test/` — Unit tests (Jest + jsdom)
 - `examples/` — Integration samples
+- `examples/mock/web_sdk.js` — Mock Visa web SDK served from the dev CDN for dev and UAT (deployed copy lives in `cdn.basistheory.com` under `dev/javascript/push-provisioning/mock/`)
 - `scripts/prepare.js` — Creates dist/package.json before the Parcel build
 
 ## Gotchas
 
 - **Parcel bundler**: targets configured in `package.json` `"targets"`. Outputs: `dist/main/` (CJS), `dist/module/` (ESM), `dist/types/` (declarations), `dist/bundle/` (browser global).
 - **The Visa script is Visa-hosted**: it is loaded by URL with the tenant's AppID and sets the `WebSDK` global synchronously; wait for the global, not the script `load` event.
+- **Visa binds the buttons**: `setupPushProvisionSDK` attaches click listeners itself and replaces earlier bindings on every call, so the wallet flow re-sends every wallet set up in the session on each handler call. Handlers must be called before the click, not from it.
+- **Mock in jsdom**: the mock needs `crypto.subtle` and `TextEncoder` from Node, and jsdom never executes injected scripts, so tests `require` the mock and add a `<script src>` tag matching the configured URL for `loadScript` to find it.
 - **Wire format**: the Basis Theory API uses snake_case (`token_id`, `encrypted_card_payload`); the SDK exposes camelCase.
 - **Size limits**: `size-limit` in `package.json` caps the main and module targets.
 - **Husky git hooks**: `husky install` runs on `prepare`. CI disables with `HUSKY=0`.

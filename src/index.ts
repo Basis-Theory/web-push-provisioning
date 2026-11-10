@@ -1,13 +1,13 @@
+import { ENVIRONMENTS, Environment, VISA_SDK_BASE_URLS } from '~src/constants';
 import {
-  ENVIRONMENTS,
-  Environment,
-  VISA_SDK_BASE_URLS,
-  VISA_SDK_GLOBAL_NAME,
-} from '~src/constants';
-import { loadScript } from '~src/handlers/loadScript';
+  VisaWebSdkFactory,
+  createVisaSdkAdapter,
+  loadVisaSdkFactory,
+} from '~src/handlers/visaSdk';
 import { createRequestEncryptedCardPayload } from '~src/session';
 import { createHttpClient, resolveApiBaseUrlOverride } from '~src/utils/http';
 import { createLogger } from '~src/utils/logging';
+import { createWalletFlow } from '~src/wallets';
 
 declare global {
   interface Window {
@@ -16,16 +16,36 @@ declare global {
 }
 
 export type ConfigOptions = {
+  /**
+   * Selects the Visa script: `sandbox` (default), `production`, or `mock`
+   * (the Basis Theory mock served from the dev CDN for dev and UAT tenants).
+   */
   environment?: Environment;
+  /**
+   * Visa AppID issued for the tenant. Required for `sandbox` and
+   * `production`; the mock ignores it.
+   */
+  appId?: string;
+  /**
+   * Overrides the Basis Theory API host. Takes precedence over `region`.
+   */
   apiBaseUrl?: string;
+  /**
+   * Selects a regional API host: `us` or `eu`.
+   */
   region?: string;
+  /**
+   * Overrides the Visa script URL, for example to load a local mock.
+   */
   visaSdkUrl?: string;
+  /**
+   * Disables SDK telemetry.
+   */
   disableTelemetry?: boolean;
 };
 
 export const resolveVisaSdkUrl = (
-  appId: string,
-  options?: Pick<ConfigOptions, 'environment' | 'visaSdkUrl'>
+  options?: Pick<ConfigOptions, 'environment' | 'visaSdkUrl' | 'appId'>
 ): string => {
   const environment = options?.environment ?? 'sandbox';
 
@@ -34,10 +54,23 @@ export const resolveVisaSdkUrl = (
   }
 
   const base = options?.visaSdkUrl ?? VISA_SDK_BASE_URLS[environment];
+  const appId = options?.appId;
+
+  if (!appId) {
+    if (environment === 'mock' || options?.visaSdkUrl) {
+      return base;
+    }
+
+    throw new Error(`appId is required for the ${environment} environment`);
+  }
 
   return `${base}?appId=${encodeURIComponent(appId)}`;
 };
 
+/**
+ * Creates a push provisioning client. `apiKey` must be a Basis Theory
+ * session key or public key; private keys must never be used in the browser.
+ */
 const BasisTheoryPushProvisioning = (
   apiKey: string,
   configOptions?: ConfigOptions
@@ -53,14 +86,54 @@ const BasisTheoryPushProvisioning = (
   );
 
   const environment: Environment = configOptions?.environment ?? 'sandbox';
+  const scriptOptions = { ...configOptions, environment };
+
+  let factory: Promise<VisaWebSdkFactory> | undefined;
+
+  const loadVisaSdk = (): Promise<VisaWebSdkFactory> => {
+    factory ??= Promise.resolve()
+      .then(() => loadVisaSdkFactory(resolveVisaSdkUrl(scriptOptions)))
+      .catch((error: Error) => {
+        factory = undefined;
+        throw error;
+      });
+
+    return factory;
+  };
+
+  const flow = createWalletFlow({
+    getAdapter: () =>
+      loadVisaSdk().then((loaded) =>
+        createVisaSdkAdapter(loaded, (error) => {
+          void logger.log.warn(
+            `Visa web SDK error: ${error?.message ?? 'unknown'}`,
+            {
+              code: String((error as { code?: string })?.code ?? ''),
+            }
+          );
+        })
+      ),
+    requestEncryptedCardPayload: createRequestEncryptedCardPayload(http),
+    logger,
+  });
 
   return {
     environment,
-    loadVisaSdk: (appId: string) =>
-      loadScript(resolveVisaSdkUrl(appId, { ...configOptions, environment }), {
-        globalName: VISA_SDK_GLOBAL_NAME,
-      }),
-    requestEncryptedCardPayload: createRequestEncryptedCardPayload(http),
+    /**
+     * Injects the Visa script ahead of time. `getSupportedWallets` loads it on
+     * demand, so this is optional.
+     */
+    loadVisaSdk,
+    /**
+     * Starts a Visa session for the card token and returns the wallets the
+     * card can be added to, with a handler per wallet.
+     */
+    getSupportedWallets: flow.getSupportedWallets,
+    /**
+     * Ends the Visa session. Called automatically after a wallet reports its
+     * result and when the page is hidden or unloaded.
+     */
+    logout: flow.logout,
   };
 };
 
@@ -69,9 +142,46 @@ if (typeof window !== 'undefined') {
 }
 
 export { BasisTheoryPushProvisioning };
-export type { Environment } from '~src/constants';
+export type BasisTheoryPushProvisioningClient = ReturnType<
+  typeof BasisTheoryPushProvisioning
+>;
+export {
+  DEFAULT_BUTTON_IDS,
+  PROVISIONING_PARTIAL_CODES,
+  PROVISIONING_SUCCESS_CODES,
+  VISA_SDK_CONTAINER_ID,
+  VISA_SDK_MOCK_URL,
+  WALLETS,
+} from '~src/constants';
+export type { Environment, Wallet } from '~src/constants';
+export type {
+  ProvisioningResult,
+  ProvisioningStatus,
+} from '~src/handlers/results';
+export type {
+  VisaProvisioningResult,
+  VisaSdkAdapter,
+  VisaSupportedWallet,
+  VisaWalletSetup,
+  VisaWalletSetupOptions,
+  VisaWebSdk,
+  VisaWebSdkFactory,
+} from '~src/handlers/visaSdk';
 export type {
   EncryptedCardPayloadRequest,
   EncryptedCardPayloadResponse,
 } from '~src/session';
-export type { BasisTheoryPushProvisioningError } from '~src/utils/errors';
+export type {
+  BasisTheoryPushProvisioningError,
+  VisaSdkError,
+} from '~src/utils/errors';
+export type {
+  AppleWalletHandler,
+  GoogleWalletHandler,
+  GoogleWalletHandlerOptions,
+  SupportedWallet,
+  SupportedWalletsOptions,
+  SupportedWalletsResponse,
+  WalletHandlerOptions,
+  WalletStatus,
+} from '~src/wallets';

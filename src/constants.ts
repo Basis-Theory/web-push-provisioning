@@ -11,13 +11,41 @@ export const REGIONAL_API_BASE_URLS: Record<string, string> = {
 
 export const PUSH_PROVISIONING_PATH = '/push-provisioning';
 
-export const ENVIRONMENTS = ['sandbox', 'production'] as const;
+export const ENVIRONMENTS = ['sandbox', 'production', 'mock'] as const;
 
 export type Environment = (typeof ENVIRONMENTS)[number];
+
+export const VISA_SDK_MOCK_URL =
+  'https://cdn.flock-dev.com/javascript/push-provisioning/mock/web_sdk.js';
 
 export const VISA_SDK_BASE_URLS: Record<Environment, string> = {
   sandbox: 'https://sbx.digitalcardservice.com/web-sdk/V1/web_sdk.js',
   production: 'https://js.digitalcardservice.com/web-sdk/V1/web_sdk.js',
+  mock: VISA_SDK_MOCK_URL,
 };
 
 export const VISA_SDK_GLOBAL_NAME = 'WebSDK';
+
+export const VISA_SDK_CONTAINER_ID = 'web_sdk_container_id';
+
+export const WALLETS = {
+  APPLE: 'APPLE',
+  GOOGLE: 'GOOGLE',
+} as const;
+
+export type Wallet = (typeof WALLETS)[keyof typeof WALLETS];
+
+export const DEFAULT_BUTTON_IDS: Record<Wallet, string> = {
+  APPLE: 'add-to-apple-wallet-button',
+  GOOGLE: 'add-to-google-wallet-button',
+};
+
+export const PROVISIONING_SUCCESS_CODES = [
+  'VPPW_1200',
+  'VPPW_1206',
+  'VPPW_2002',
+  'VPPW_2003',
+  'VPPW_2004',
+] as const;
+
+export const PROVISIONING_PARTIAL_CODES = ['VPPW_2005', 'VPPW_2006'] as const;

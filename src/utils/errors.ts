@@ -12,6 +12,16 @@ type BasisTheoryPushProvisioningError = Error & {
   errors?: Record<string, string[]>;
 };
 
+/**
+ * An error raised by the Visa web SDK. `code` is Visa's error code
+ * (`VDC_ERROR_*`, `VPPW_ERROR_*`, `VW_ERROR_*`) and `correlationId` is the
+ * reference Visa support asks for.
+ */
+type VisaSdkError = Error & {
+  code?: string;
+  correlationId?: string;
+};
+
 const isApiError = (error: unknown): error is ApiError =>
   typeof error === 'object' &&
   error !== null &&
@@ -35,5 +45,27 @@ const processApiError = (apiError: ApiError): never => {
   throw createError(apiError);
 };
 
-export { isApiError, processApiError };
-export type { ApiError, BasisTheoryPushProvisioningError };
+const toVisaSdkError = (cause: unknown): VisaSdkError => {
+  const source = (
+    typeof cause === 'object' && cause !== null ? cause : {}
+  ) as Partial<VisaSdkError>;
+  const message =
+    typeof source.message === 'string' && source.message
+      ? source.message
+      : typeof cause === 'string'
+        ? cause
+        : 'The Visa web SDK reported an error';
+
+  const error = (
+    cause instanceof Error ? cause : new Error(message)
+  ) as VisaSdkError;
+  error.name = 'VisaSdkError';
+  error.code = typeof source.code === 'string' ? source.code : undefined;
+  error.correlationId =
+    typeof source.correlationId === 'string' ? source.correlationId : undefined;
+
+  return error;
+};
+
+export { isApiError, processApiError, toVisaSdkError };
+export type { ApiError, BasisTheoryPushProvisioningError, VisaSdkError };
