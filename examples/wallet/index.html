@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Add your card to a wallet</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 2rem auto;
+        max-width: 32rem;
+        padding: 0 1rem;
+      }
+
+      .wallet {
+        align-items: center;
+        display: flex;
+        gap: 1rem;
+        margin: 1rem 0;
+      }
+
+      .wallet button {
+        background: none;
+        border: 0;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      .wallet button:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      /* Placeholder: the real asset comes from Apple Business Register. */
+      #add-to-apple-wallet-button {
+        background: #000;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 1rem;
+        padding: 0.75rem 1.25rem;
+        width: 240px;
+      }
+
+      #add-to-google-wallet-button {
+        max-width: 300px;
+        min-width: 100px;
+        width: 240px;
+      }
+
+      #add-to-google-wallet-button img {
+        display: block;
+        width: 100%;
+      }
+
+      #result {
+        border-left: 4px solid #999;
+        padding: 0.5rem 1rem;
+      }
+
+      body[data-state='success'] #result {
+        border-color: #1a7f37;
+      }
+
+      body[data-state='failed'] #result {
+        border-color: #cf222e;
+      }
+    </style>
+  </head>
+  <body data-state="signed-out">
+    <h1>Add your card to a wallet</h1>
+
+    <section id="sign-in">
+      <p>
+        Provisioning sits behind strong authentication. This button stands in
+        for your portal's login.
+      </p>
+      <button id="sign-in-button" type="button">Sign in</button>
+    </section>
+
+    <section id="wallets" hidden>
+      <div id="web_sdk_container_id"></div>
+
+      <div class="wallet">
+        <button id="add-to-apple-wallet-button" type="button" disabled>
+          Add to Apple Wallet
+        </button>
+        <span id="apple-wallet-status"></span>
+      </div>
+      <div class="wallet">
+        <button id="add-to-google-wallet-button" type="button" disabled>
+          <img
+            alt="Add to Google Wallet"
+            src="https://pay.google.com/gp/v/a/pushprovisioning/saveButtonImage?hl=en-US"
+          />
+        </button>
+        <span id="google-wallet-status"></span>
+      </div>
+
+      <p id="status" role="status"></p>
+
+      <div id="result" hidden>
+        <p id="result-message"></p>
+        <p>
+          Code: <code id="result-code"></code><br />
+          Correlation id: <code id="result-correlation-id"></code>
+        </p>
+        <button id="retry-button" type="button"></button>
+      </div>
+    </section>
+
+    <script src="/sdk.js"></script>
+    <script src="/wallet.js"></script>
+  </body>
+</html>

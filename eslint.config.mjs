@@ -35,6 +35,7 @@ export default compat.config({
     '**/*.mjs',
     '**/*.js',
     'dist',
+    'e2e',
     '**/*.test.ts',
     'jest.config.js',
   ],

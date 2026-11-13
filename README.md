@@ -2,8 +2,6 @@
 
 Browser SDK that lets a cardholder add a Basis Theory vaulted card to Apple Pay or Google Wallet from a web page, without the card number ever reaching the page. It wraps the Visa Digital Enablement (VDE) JavaScript SDK and exchanges the Visa session nonce for an encrypted card payload through the Basis Theory API.
 
-> Status: scaffold. The wallet flow (`getSupportedWallets`, wallet buttons, result mapping) lands in follow-up releases.
-
 ## Install
 
 ```bash
@@ -126,7 +124,7 @@ yarn test
 yarn lint
 ```
 
-See [`examples/`](examples/README.md) for integration samples.
+See [`examples/`](examples/README.md) for integration samples, including a [runnable wallet page](examples/wallet/README.md) that the Playwright end-to-end test (`yarn test:e2e`) drives against the mock.
 
 ## License
 

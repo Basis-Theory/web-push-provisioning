@@ -16,6 +16,7 @@
     "build": "node ./scripts/prepare.js && yarn generateTypes && parcel build --no-cache",
     "build:dev": "yarn clean && yarn generateTypes && parcel build && npx size-limit",
     "clean": "rimraf dist .parcel-cache",
+    "example": "node examples/wallet/server.mjs",
     "generateTypes": "tsc --emitDeclarationOnly",
     "lint-staged": "lint-staged",
     "lint:fix": "eslint --fix",
@@ -24,6 +25,7 @@
     "prettier:write": "prettier --write '**/*.{ts,json}'",
     "prettier": "prettier '**/*.{ts,json}'",
     "release": "semantic-release",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
     "test:coverage": "jest --coverage --passWithNoTests",
     "test:watch": "jest --watch --passWithNoTests",
     "test": "jest --passWithNoTests",
@@ -32,6 +34,7 @@
   "devDependencies": {
     "@parcel/packager-ts": "2.16.4",
     "@parcel/transformer-typescript-types": "2.16.4",
+    "@playwright/test": "^1.65.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^13.0.0",
     "@semantic-release/exec": "^7.1.0",
