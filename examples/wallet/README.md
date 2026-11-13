@@ -25,7 +25,7 @@ PUSH_PROVISIONING_SIGNATURE_SECRET=<tenant test signature secret> \
 yarn example
 ```
 
-Open <http://localhost:4173>.
+Open <http://127.0.0.1:4173>. The server listens on loopback only, because it holds the private key.
 
 | Variable                             | Default                            | Purpose                                                                           |
 | ------------------------------------ | ---------------------------------- | --------------------------------------------------------------------------------- |

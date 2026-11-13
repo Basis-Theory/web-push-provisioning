@@ -182,6 +182,6 @@ createServer(async (request, response) => {
       response.end();
     }
   }
-}).listen(port, () => {
-  console.log(`Wallet example listening on http://localhost:${port}`);
+}).listen(port, '127.0.0.1', () => {
+  console.log(`Wallet example listening on http://127.0.0.1:${port}`);
 });

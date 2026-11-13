@@ -10,14 +10,14 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   reporter: [['list']],
   use: {
-    baseURL: `http://localhost:${port}`,
+    baseURL: `http://127.0.0.1:${port}`,
     trace: 'retain-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     command: 'node examples/wallet/server.mjs',
     cwd: path.resolve(__dirname, '..'),
-    url: `http://localhost:${port}/`,
+    url: `http://127.0.0.1:${port}/`,
     reuseExistingServer: !process.env.CI,
   },
 });
