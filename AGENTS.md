@@ -11,6 +11,7 @@ yarn test                               # Jest unit tests (jsdom)
 yarn lint                               # ESLint
 npx jest --testPathPattern="<pattern>"  # Targeted test
 yarn test:coverage                      # Tests with coverage
+yarn test:e2e                           # Playwright against the wallet example (needs a build and tenant env vars)
 ```
 
 Always verify fixes with targeted tests before considering done.
@@ -27,6 +28,8 @@ Always verify fixes with targeted tests before considering done.
 - `src/utils/` — HTTP client, logging, error mapping
 - `test/` — Unit tests (Jest + jsdom)
 - `examples/` — Integration samples
+- `examples/wallet/` — Runnable wallet page and its stand-in backend (`yarn example`)
+- `e2e/` — Playwright test that runs the wallet example against dev with the mock; CI job `E2E` reads the test tenant from the `PR` environment secrets
 - `examples/mock/web_sdk.js` — Mock Visa web SDK served from the dev CDN for dev and UAT (deployed copy lives in `cdn.basistheory.com` under `dev/javascript/push-provisioning/mock/`)
 - `scripts/prepare.js` — Creates dist/package.json before the Parcel build
 

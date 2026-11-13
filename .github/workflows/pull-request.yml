@@ -8,8 +8,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# Both job check contexts below are required by the master branch ruleset;
-# renaming a job strands PRs.
+# The Verify and PR Security Check contexts are required by the master branch
+# ruleset; renaming those jobs strands PRs.
 jobs:
   verify:
     name: Verify
@@ -38,6 +38,45 @@ jobs:
 
       - name: Size limit
         run: npx size-limit
+
+  # Fork and Dependabot PRs cannot read the test tenant secrets.
+  e2e:
+    name: E2E
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    environment: PR
+    permissions:
+      contents: read
+    env:
+      HUSKY: 0
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '20.x'
+          cache: yarn
+
+      - name: Install deps
+        run: yarn install --frozen-lockfile --no-progress --ignore-scripts
+
+      - name: Build
+        run: make build
+        env:
+          SKIP_INSTALL: 1
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the wallet example end to end
+        run: yarn test:e2e
+        env:
+          BT_API_URL: https://api.flock-dev.com
+          BT_PUBLIC_API_KEY: ${{ secrets.E2E_BT_PUBLIC_API_KEY }}
+          BT_PRIVATE_API_KEY: ${{ secrets.E2E_BT_PRIVATE_API_KEY }}
+          PUSH_PROVISIONING_SIGNATURE_SECRET: ${{ secrets.E2E_PUSH_PROVISIONING_SIGNATURE_SECRET }}
 
   pr-security-check:
     name: PR Security Check
