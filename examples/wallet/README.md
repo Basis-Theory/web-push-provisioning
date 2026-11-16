@@ -10,7 +10,7 @@ A runnable page that adds a card to Apple Wallet or Google Wallet with `@basis-t
 
 ## Run it
 
-You need a TEST tenant enabled for push provisioning, with `web` credentials configured for the sandbox environment, and two applications:
+You need a TEST tenant enabled for push provisioning, with a push provisioning source, `web` credentials configured for the sandbox environment and BIN details enrichment turned on (the payload needs the card's funding type). Basis Theory sets these up for the tenant. You also need two applications:
 
 - a public application, used by the page to create a session;
 - a private application with `token:create` and `token:use`, used by the server to create a sample card token and authorize the session.

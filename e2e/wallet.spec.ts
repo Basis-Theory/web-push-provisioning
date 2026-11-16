@@ -39,7 +39,7 @@ test('provisions a card through a session, the payload API and the mock', async 
 
   await expect(page.locator('#apple-wallet-status')).toHaveText('ELIGIBLE');
   await expect(page.locator('#google-wallet-status')).toHaveText('ELIGIBLE');
-  await expect(page.locator('#web_sdk_container_id')).not.toBeEmpty();
+  await expect(page.locator('#web_sdk_container_id > *')).not.toHaveCount(0);
 
   await apple(page).click();
 
