@@ -38,7 +38,7 @@ Open <http://127.0.0.1:4173>. The server listens on loopback only, because it ho
 | `CARD_TOKEN_ID`                      | a sample card created on startup   | Card token to provision. It needs `cardholder_name` and a full `billing_address`. |
 | `PORT`                               | `4173`                             | Port the example listens on.                                                      |
 
-With the mock, the Signature Secret is sent to the browser. Use a dedicated test secret on a TEST tenant only. Append `?scenario=<name>` to the URL to try the mock's [failure scenarios](../mock/README.md#scenarios), for example `?scenario=no-wallets`.
+With the mock, the Signature Secret is sent to the browser. Use a dedicated test secret on a TEST tenant only, and keep that tenant for mock work: a TEST tenant has a single sandbox credential slot, so a tenant that holds Visa-issued sandbox credentials must never be used with the mock. Append `?scenario=<name>` to the URL to try the mock's [failure scenarios](../mock/README.md#scenarios), for example `?scenario=no-wallets`.
 
 ## What the page shows
 
@@ -46,13 +46,13 @@ With the mock, the Signature Secret is sent to the browser. Use a dedicated test
 2. **Session.** The page creates a Basis Theory session with the public key and sends its `nonce` to the backend. The backend authorizes the session with a `token:use` rule scoped to the one card token, so the session key cannot generate a payload for any other card.
 3. **Wallets.** `getSupportedWallets` loads the Visa script into the `web_sdk_container_id` element, exchanges Visa's nonce for an encrypted card payload and returns the wallets the card can be added to.
 4. **Buttons.** `add-to-apple-wallet-button` and `add-to-google-wallet-button` are always in the DOM with those ids, and both wallets are always shown: the member may be adding the card to a different device. The Visa SDK binds the click, so the page calls each wallet handler before the click and only enables the button afterwards.
-5. **Result.** Each handler resolves with a `ProvisioningResult`. On success the page shows a confirmation; on a partial or failed result it shows the code, the correlation id and a retry. Either way the Visa session has ended, so the next attempt starts again from a new session.
+5. **Result.** Each handler resolves with a `ProvisioningResult`. On success the page shows a confirmation; on a partial, unknown or failed result it shows the code, the correlation id and a retry. Either way the Visa session has ended, so the next attempt starts again from a new session.
 
 ## Rules to carry into your page
 
 - **Do not close or navigate away from the page while a wallet window is open.** Apple and Google open their own windows, and provisioning can still succeed after the member dismisses them. Leaving the page ends the Visa session and loses the result. The example warns through `beforeunload` from the wallet button click until the result arrives; keep single-page-app route changes out of that window too.
-- **Google's button is a Google-hosted image.** Load it from `https://pay.google.com/gp/v/a/pushprovisioning/saveButtonImage?hl=en-US` and reserve 100 to 300 px of width for it.
-- **Apple's button here is a placeholder.** The real asset comes from Apple Business Register during the implementation project. Swap it in and follow Apple's brand guidelines.
+- **Google's button is a Google-hosted image.** Load it from `https://pay.google.com/gp/v/a/pushprovisioning/saveButtonImage?hl=en-US` at a height of 46 px and reserve 100 to 300 px of width: the width changes with the locale in `hl`, so do not fix it.
+- **Apple's button here is a placeholder.** The real asset comes from Apple Business Register during the implementation project. Swap it in and follow Apple's brand guidelines. They forbid a dimmed badge, so the example hides a wallet button while it is not ready and never greys it out.
 - **Log `correlationId`.** Visa support needs it to trace an attempt.
 
 ## End-to-end test

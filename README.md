@@ -111,8 +111,9 @@ See [`examples/mock/README.md`](examples/mock/README.md) for the scenarios and o
 
 ## Prerequisites
 
-- A Basis Theory tenant enabled for push provisioning under the Basis Theory Visa program.
-- Card tokens that carry the cardholder name and billing address required by the wallets.
+- A Basis Theory tenant enabled for push provisioning under the Basis Theory Visa program. Basis Theory enables the feature, sets the tenant's Visa source and credentials, and turns on BIN details enrichment, which the payload needs to report the card's funding type.
+- Card tokens that carry `cardholder_name` and a `billing_address` with `line1`, `city`, `state_code`, `postal_code`, `country_code` and `phone_number`.
+- A tenant dedicated to mock testing, separate from the one that holds Visa-issued sandbox credentials.
 - Wallet onboarding (Apple and Google) owned by the card program.
 
 ## Development

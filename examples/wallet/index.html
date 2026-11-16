@@ -26,9 +26,9 @@
         padding: 0;
       }
 
+      /* Hidden, not dimmed: Apple's badge guidelines forbid a dimmed badge. */
       .wallet button:disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
+        visibility: hidden;
       }
 
       /* Placeholder: the real asset comes from Apple Business Register. */
@@ -44,12 +44,12 @@
       #add-to-google-wallet-button {
         max-width: 300px;
         min-width: 100px;
-        width: 240px;
       }
 
       #add-to-google-wallet-button img {
         display: block;
-        width: 100%;
+        height: 46px;
+        max-width: 100%;
       }
 
       #result {

@@ -52,12 +52,15 @@
       return;
     }
 
+    const messages = {
+      partial: `The card was only partly added to ${wallet}.`,
+      unknown: `The card may still be added to ${wallet}. Check your device before trying again.`,
+    };
+
     showOutcome({
       state: 'failed',
       message:
-        result.status === 'partial'
-          ? `The card was only partly added to ${wallet}.`
-          : `The card could not be added to ${wallet}.`,
+        messages[result.status] ?? `The card could not be added to ${wallet}.`,
       code: result.code,
       correlationId: result.correlationId,
       retryLabel: 'Try again',
