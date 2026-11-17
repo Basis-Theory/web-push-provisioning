@@ -104,11 +104,28 @@
       }
 
       .wallet {
-        align-items: center;
         border-bottom: 1px solid var(--line);
+        min-height: 94px;
+        padding: 16px 0;
+      }
+
+      .wallet-head {
+        align-items: center;
         display: flex;
         justify-content: space-between;
-        min-height: 78px;
+        margin-bottom: 12px;
+      }
+
+      .name {
+        align-items: center;
+        color: var(--ink);
+        display: flex;
+        font-weight: 600;
+        gap: 8px;
+      }
+
+      .name img {
+        height: 24px;
       }
 
       .wallet button {
@@ -123,7 +140,7 @@
         visibility: hidden;
       }
 
-      .wallet span {
+      .chip {
         border: 1px solid var(--line);
         border-radius: 999px;
         color: var(--muted);
@@ -133,7 +150,7 @@
         text-transform: uppercase;
       }
 
-      .wallet span:empty,
+      .chip:empty,
       body[data-state='success'] .wallet,
       body[data-state='failed'] .wallet {
         display: none;
@@ -231,19 +248,29 @@
         <div id="web_sdk_container_id"></div>
 
         <div class="wallet">
+          <div class="wallet-head">
+            <span class="name">
+              <img alt="" hidden id="apple-wallet-logo" />Apple Wallet
+            </span>
+            <span class="chip" id="apple-wallet-status"></span>
+          </div>
           <button id="add-to-apple-wallet-button" type="button" disabled>
             Add to Apple Wallet
           </button>
-          <span id="apple-wallet-status"></span>
         </div>
         <div class="wallet">
+          <div class="wallet-head">
+            <span class="name">
+              <img alt="" hidden id="google-wallet-logo" />Google Wallet
+            </span>
+            <span class="chip" id="google-wallet-status"></span>
+          </div>
           <button id="add-to-google-wallet-button" type="button" disabled>
             <img
               alt="Add to Google Wallet"
               src="https://pay.google.com/gp/v/a/pushprovisioning/saveButtonImage?hl=en-US"
             />
           </button>
-          <span id="google-wallet-status"></span>
         </div>
 
         <p id="status" role="status"></p>

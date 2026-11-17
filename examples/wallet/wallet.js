@@ -10,6 +10,17 @@
     APPLE: byId('apple-wallet-status'),
     GOOGLE: byId('google-wallet-status'),
   };
+  const logos = {
+    APPLE: byId('apple-wallet-logo'),
+    GOOGLE: byId('google-wallet-logo'),
+  };
+  // Saving to the Google account shares the card number with Google. It is on
+  // here to exercise both Google paths; a real page needs Visa's enablement
+  // and cardholder disclosures first.
+  const handlerOptions = {
+    APPLE: {},
+    GOOGLE: { provisionCardToGoogleAccount: true },
+  };
 
   let config;
   let attempt = 0;
@@ -159,9 +170,14 @@
       }
 
       Object.entries(statuses).forEach(([name, element]) => {
-        element.textContent =
-          wallets.find((wallet) => wallet.name === name)?.status ??
-          'NOT_SUPPORTED';
+        const wallet = wallets.find((candidate) => candidate.name === name);
+        const buttonImage = buttons[name].querySelector('img')?.src;
+
+        element.textContent = wallet?.status ?? 'UNSUPPORTED';
+        logos[name].hidden = !wallet?.logoUrl || wallet.logoUrl === buttonImage;
+        if (!logos[name].hidden) {
+          logos[name].src = wallet.logoUrl;
+        }
       });
 
       const handlers = { APPLE: appleWallet, GOOGLE: googleWallet };
@@ -171,7 +187,7 @@
           return;
         }
 
-        handler().then(
+        handler(handlerOptions[name]).then(
           (result) => isCurrent() && showResult(result),
           (error) => isCurrent() && showFailure(error)
         );

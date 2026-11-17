@@ -53,6 +53,8 @@ With the mock, the Signature Secret is sent to the browser. Use a dedicated test
 - **Do not close or navigate away from the page while a wallet window is open.** Apple and Google open their own windows, and provisioning can still succeed after the member dismisses them. Leaving the page ends the Visa session and loses the result. The example warns through `beforeunload` from the wallet button click until the result arrives; keep single-page-app route changes out of that window too.
 - **Google's button is a Google-hosted image.** Load it from `https://pay.google.com/gp/v/a/pushprovisioning/saveButtonImage?hl=en-US` at a height of 46 px and reserve 100 to 300 px of width: the width changes with the locale in `hl`, so do not fix it.
 - **Apple's button here is a placeholder.** The real asset comes from Apple Business Register during the implementation project. Swap it in and follow Apple's brand guidelines. They forbid a dimmed badge, so the example hides a wallet button while it is not ready and never greys it out.
+- **Saving the card to the Google account is on in this example only.** The page passes `provisionCardToGoogleAccount: true` so both Google paths get exercised. It shares the card number with Google, so a real page turns it on only after Visa enables it for the program and the page shows the cardholder disclosures it requires.
+- **Show each wallet's name, and Visa's logo when it returns one.** The example labels each wallet and adds `logoUrl` from `getSupportedWallets` when present. Do not draw your own wallet icons.
 - **Log `correlationId`.** Visa support needs it to trace an attempt.
 
 ## End-to-end test
