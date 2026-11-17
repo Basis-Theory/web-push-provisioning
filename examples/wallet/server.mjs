@@ -131,6 +131,8 @@ const routes = {
     sendFile(response, path.join(here, 'index.html'), 'text/html'),
   'GET /wallet.js': (_request, response) =>
     sendFile(response, path.join(here, 'wallet.js'), 'text/javascript'),
+  'GET /logo.svg': (_request, response) =>
+    sendFile(response, path.join(here, 'basis-theory.svg'), 'image/svg+xml'),
   'GET /sdk.js': (_request, response) =>
     sendFile(response, bundlePath, 'text/javascript'),
   'GET /config': async (_request, response) =>
