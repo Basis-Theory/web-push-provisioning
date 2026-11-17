@@ -149,6 +149,7 @@ export {
   DEFAULT_BUTTON_IDS,
   PROVISIONING_PARTIAL_CODES,
   PROVISIONING_SUCCESS_CODES,
+  PROVISIONING_UNKNOWN_CODES,
   VISA_SDK_CONTAINER_ID,
   VISA_SDK_MOCK_URL,
   WALLETS,
@@ -160,7 +161,9 @@ export type {
 } from '~src/handlers/results';
 export type {
   VisaProvisioningResult,
+  VisaResultCode,
   VisaSdkAdapter,
+  VisaSetupResults,
   VisaSupportedWallet,
   VisaWalletSetup,
   VisaWalletSetupOptions,

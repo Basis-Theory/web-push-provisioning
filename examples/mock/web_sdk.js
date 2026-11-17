@@ -10,6 +10,16 @@
     'no-wallets',
     'missing-button',
   ]);
+  const SETUP_SUCCESS = Object.freeze({
+    APPLE: {
+      code: 'VPPW_1001',
+      message: 'Apple Push Provisioning has been initialized successfully.',
+    },
+    GOOGLE: {
+      code: 'VPPW_2001',
+      message: 'Google Push Provisioning has been initialized successfully.',
+    },
+  });
   const GOOGLE_BUTTON_IMAGE =
     'https://pay.google.com/gp/v/a/pushprovisioning/saveButtonImage?hl=en-US';
 
@@ -132,29 +142,69 @@
       state.bindings = [];
     };
 
-    const guardSession = (encryptedCardPayload) => {
+    const sessionProblem = (encryptedCardPayload) => {
       if (!state.initialized) {
-        return fail('VW_ERROR_427', 'IframePromiseHandlerError');
+        return ['VW_ERROR_427', 'IframePromiseHandlerError'];
       }
       if (typeof encryptedCardPayload !== 'string' || !encryptedCardPayload) {
-        return fail('VDC_ERROR_403', 'Invalid encrypted card payload');
+        return ['VDC_ERROR_403', 'Invalid encrypted card payload'];
       }
       if (config.scenario === 'expired-nonce' || Date.now() >= state.nonceExp) {
-        return fail('VDC_ERROR_403', 'Nonce expired');
+        return ['VDC_ERROR_403', 'Nonce expired'];
       }
       return null;
     };
 
+    const guardSession = (encryptedCardPayload) => {
+      const problem = sessionProblem(encryptedCardPayload);
+      return problem ? fail(problem[0], problem[1]) : null;
+    };
+
+    const setupProblem = (wallet, walletOptions) => {
+      if (!SUPPORTED_WALLETS[wallet]) {
+        return [
+          'VPPW_ERROR_008',
+          `The requested wallet is not supported: ${String(wallet)}`,
+        ];
+      }
+      const element = walletOptions.buttonId
+        ? global.document.getElementById(walletOptions.buttonId)
+        : null;
+      if (!element || config.scenario === 'missing-button') {
+        return [
+          'VPPW_ERROR_002',
+          `Button not found: ${String(walletOptions.buttonId)}`,
+        ];
+      }
+      return null;
+    };
+
+    // Apple reports one code; Google reports arrays.
     const deliver = (wallet, callback) => {
       if (typeof callback !== 'function') {
         return;
       }
-      const result = config.results[wallet] || {};
+      const configured = config.results[wallet] || {};
       const correlationId = state.correlationId;
+      const entry = configured.error || configured;
+      const code = { code: entry.code, message: entry.message };
+      if (wallet === SUPPORTED_WALLETS.GOOGLE) {
+        callback(
+          configured.error
+            ? { error: { correlationId, errorCodes: [code] } }
+            : {
+                result: {
+                  resultCodes: [code],
+                  nonFatalErrors: configured.nonFatalErrors || [],
+                },
+              }
+        );
+        return;
+      }
       callback(
-        result.error
-          ? { wallet, error: Object.assign({ correlationId }, result.error) }
-          : Object.assign({ wallet, correlationId }, result)
+        configured.error
+          ? { error: Object.assign({ correlationId }, code) }
+          : { result: code }
       );
     };
 
@@ -174,38 +224,55 @@
         );
       },
 
+      // A single wallet resolves or rejects; a list always resolves with a
+      // status per wallet.
       setupPushProvisionSDK(encryptedCardPayload, wallets) {
-        const rejected = guardSession(encryptedCardPayload);
-        if (rejected) {
-          return rejected;
+        const single = !Array.isArray(wallets);
+        const entries = single ? [wallets] : wallets;
+        const problem = sessionProblem(encryptedCardPayload);
+        if (problem && single) {
+          return fail(problem[0], problem[1]);
         }
-        if (!Array.isArray(wallets) || wallets.length === 0) {
+        if (problem) {
+          const error = sdkError(problem[0], problem[1], state.correlationId);
+          if (typeof onError === 'function') {
+            onError(error);
+          }
+          return Promise.resolve({
+            error: {
+              code: problem[0],
+              message: problem[1],
+              correlationId: state.correlationId,
+            },
+          });
+        }
+        if (entries.length === 0 || !entries[0]) {
           return fail(
             undefined,
             'WebSDK mock: setupPushProvisionSDK needs at least one wallet'
           );
         }
         unbind();
-        for (const entry of wallets) {
+        const results = {};
+        for (const entry of entries) {
           const wallet = entry && entry.wallet;
           const walletOptions = (entry && entry.options) || {};
-          if (!SUPPORTED_WALLETS[wallet]) {
+          const failure = setupProblem(wallet, walletOptions);
+          if (failure && single) {
             unbind();
-            return fail(
-              undefined,
-              `WebSDK mock: unsupported wallet ${String(wallet)}`
-            );
+            return fail(failure[0], failure[1]);
           }
-          const element = walletOptions.buttonId
-            ? global.document.getElementById(walletOptions.buttonId)
-            : null;
-          if (!element || config.scenario === 'missing-button') {
-            unbind();
-            return fail(
-              'VPPW_ERROR_002',
-              `Button not found: ${String(walletOptions.buttonId)}`
-            );
+          if (failure) {
+            results[String(wallet)] = {
+              status: 'SETUP_FAILURE',
+              code: failure[0],
+              message: failure[1],
+            };
+            continue;
           }
+          const element = global.document.getElementById(
+            walletOptions.buttonId
+          );
           const handler = () => {
             global.setTimeout(
               () => deliver(wallet, walletOptions.provisioningResultCallback),
@@ -214,11 +281,15 @@
           };
           element.addEventListener('click', handler);
           state.bindings.push({ element, handler });
+          results[wallet] = Object.assign(
+            { status: 'SETUP_SUCCESS' },
+            SETUP_SUCCESS[wallet]
+          );
         }
-        return Promise.resolve({
-          code: 'VPPW_1001',
-          correlationId: state.correlationId,
-        });
+        if (single) {
+          return Promise.resolve(SETUP_SUCCESS[entries[0].wallet]);
+        }
+        return Promise.resolve(results);
       },
 
       getPushProvisioningUX() {

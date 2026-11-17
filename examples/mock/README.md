@@ -28,6 +28,10 @@ The mock never ships a secret. Set the tenant's test Signature Secret from the p
 | `wallets`         | Apple and Google, `ELIGIBLE`              | What `getSupportedWallets` returns.                                                                         |
 | `results`         | `VPPW_1200` for Apple, `VPPW_2002` Google | Per-wallet result passed to `provisioningResultCallback`. Use `{ error: { code, message } }` for a failure. |
 
+Configure a result as `{ code, message }`; the mock delivers it in Visa's shape. Apple Wallet gets `{ result: { code, message } }` or `{ error: { code, message, correlationId } }`. Google Wallet gets `{ result: { resultCodes: [...], nonFatalErrors: [...] } }` or `{ error: { correlationId, errorCodes: [...] } }`.
+
+`setupPushProvisionSDK` follows Visa too: with a single wallet it resolves `{ code, message }` (`VPPW_1001` Apple, `VPPW_2001` Google) or rejects; with a list it always resolves with `{ APPLE: { status, code, message }, GOOGLE: { ... } }`, where `status` is `SETUP_SUCCESS` or `SETUP_FAILURE`, or with `{ error }` when the session itself is invalid.
+
 ## Scenarios
 
 | Scenario         | Behaviour                                                                                                                  |
@@ -36,6 +40,6 @@ The mock never ships a secret. Set the tenant's test Signature Secret from the p
 | `expired-nonce`  | `initialize()` issues an already-expired nonce, so the payload API rejects it, and wallet calls fail with `VDC_ERROR_403`. |
 | `lockout`        | `initialize()` rejects with `VDC_ERROR_409`.                                                                               |
 | `no-wallets`     | `getSupportedWallets` rejects with `VPPW_ERROR_004`.                                                                       |
-| `missing-button` | `setupPushProvisionSDK` rejects with `VPPW_ERROR_002`. This also happens whenever a `buttonId` is not in the DOM.          |
+| `missing-button` | `setupPushProvisionSDK` fails the wallet with `VPPW_ERROR_002`. This also happens whenever a `buttonId` is not in the DOM. |
 
 Wallet calls made before `initialize()` or after `logout()` reject with `VW_ERROR_427`, as observed on the live bundle. Every error carries `code` and `correlationId`; `getPushProvisioningUX()` returns a placeholder shape until the real response is observed.

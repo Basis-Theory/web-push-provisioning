@@ -1,6 +1,7 @@
 import {
   DEFAULT_BUTTON_IDS,
   VISA_SDK_CONTAINER_ID,
+  VISA_SETUP_FAILURE,
   WALLETS,
   Wallet,
 } from '~src/constants';
@@ -15,6 +16,7 @@ import {
   VisaWalletSetupOptions,
 } from '~src/handlers/visaSdk';
 import type { EncryptedCardPayloadRequest } from '~src/session';
+import { toVisaSdkError } from '~src/utils/errors';
 import type { Logger } from '~src/utils/logging';
 
 export type WalletStatus = 'ELIGIBLE' | 'ALREADY_PROVISIONED' | (string & {});
@@ -36,7 +38,9 @@ export type WalletHandlerOptions = {
 
 export type GoogleWalletHandlerOptions = WalletHandlerOptions & {
   /**
-   * Add the card to the cardholder's Google account. Defaults to `true`.
+   * Also save the card to the cardholder's Google account, which shares the
+   * card number with Google. Defaults to `false`; it needs Visa onboarding
+   * configuration and your own cardholder disclosures.
    */
   provisionCardToGoogleAccount?: boolean;
   /**
@@ -123,7 +127,7 @@ const googleSetupOptions = (
   'provisionCardToGoogleAccount' | 'provisionDeviceToken'
 > => {
   const provisionCardToGoogleAccount =
-    options.provisionCardToGoogleAccount ?? true;
+    options.provisionCardToGoogleAccount ?? false;
   const provisionDeviceToken = options.provisionDeviceToken ?? true;
 
   if (!provisionCardToGoogleAccount && !provisionDeviceToken) {
@@ -244,6 +248,16 @@ export const createWalletFlow = ({
             current.encryptedCardPayload,
             Array.from(current.setups.values())
           )
+          .then((results) => {
+            const setup = results[wallet];
+
+            if (setup?.status === VISA_SETUP_FAILURE) {
+              throw toVisaSdkError({
+                ...setup,
+                correlationId: sdk.getCorrelationId(),
+              });
+            }
+          })
           .catch((error: Error) => {
             current.setups.delete(wallet);
             settled = true;

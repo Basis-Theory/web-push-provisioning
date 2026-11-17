@@ -19,7 +19,7 @@ type MockSdk = {
     getSupportedWallets: (payload: string) => Promise<unknown[]>;
     setupPushProvisionSDK: (
       payload: string,
-      wallets: WalletSetup[]
+      wallets: WalletSetup | WalletSetup[]
     ) => Promise<unknown>;
   };
 };
@@ -149,10 +149,13 @@ describe('mock Visa web SDK', () => {
 
     const wallets =
       await sdk.pushProvisioningSdk.getSupportedWallets('payload');
-    await sdk.pushProvisioningSdk.setupPushProvisionSDK('payload', [
-      walletSetup('APPLE', 'add-to-apple-wallet-button', results),
-      walletSetup('GOOGLE', 'add-to-google-wallet-button', results),
-    ]);
+    const setup = await sdk.pushProvisioningSdk.setupPushProvisionSDK(
+      'payload',
+      [
+        walletSetup('APPLE', 'add-to-apple-wallet-button', results),
+        walletSetup('GOOGLE', 'add-to-google-wallet-button', results),
+      ]
+    );
     document.getElementById('add-to-apple-wallet-button')!.click();
     document.getElementById('add-to-google-wallet-button')!.click();
     await tick();
@@ -165,18 +168,32 @@ describe('mock Visa web SDK', () => {
         walletStatus: 'ELIGIBLE',
       },
     ]);
+    expect(setup).toEqual({
+      APPLE: {
+        status: 'SETUP_SUCCESS',
+        code: 'VPPW_1001',
+        message: expect.any(String) as string,
+      },
+      GOOGLE: {
+        status: 'SETUP_SUCCESS',
+        code: 'VPPW_2001',
+        message: expect.any(String) as string,
+      },
+    });
     expect(results).toEqual([
       {
-        wallet: 'APPLE',
-        code: 'VPPW_1200',
-        message: expect.any(String) as string,
-        correlationId: sdk.getCorrelationId(),
+        result: {
+          code: 'VPPW_1200',
+          message: expect.any(String) as string,
+        },
       },
       {
-        wallet: 'GOOGLE',
-        code: 'VPPW_2002',
-        message: expect.any(String) as string,
-        correlationId: sdk.getCorrelationId(),
+        result: {
+          resultCodes: [
+            { code: 'VPPW_2002', message: expect.any(String) as string },
+          ],
+          nonFatalErrors: [],
+        },
       },
     ]);
   });
@@ -198,11 +215,9 @@ describe('mock Visa web SDK', () => {
 
     expect(results).toEqual([
       {
-        wallet: 'GOOGLE',
         error: {
-          code: 'VPPW_ERROR_2007',
-          message: 'Declined',
           correlationId: sdk.getCorrelationId(),
+          errorCodes: [{ code: 'VPPW_ERROR_2007', message: 'Declined' }],
         },
       },
     ]);
@@ -228,15 +243,47 @@ describe('mock Visa web SDK', () => {
       empty.sdk.pushProvisioningSdk.getSupportedWallets('payload'),
       'VPPW_ERROR_004'
     );
+  });
 
-    WebSDK.mock.configure({ scenario: 'success' });
-    const unbound = await start();
+  it('rejects a failed single wallet setup and resolves a failed list setup', async () => {
+    const { sdk } = await start();
+    const { setupPushProvisionSDK } = sdk.pushProvisioningSdk;
+
     await expectCode(
-      unbound.sdk.pushProvisioningSdk.setupPushProvisionSDK('payload', [
-        walletSetup('APPLE', 'no-such-button', []),
-      ]),
+      setupPushProvisionSDK(
+        'payload',
+        walletSetup('APPLE', 'no-such-button', [])
+      ),
       'VPPW_ERROR_002'
     );
+    await expect(
+      setupPushProvisionSDK(
+        'payload',
+        walletSetup('APPLE', 'add-to-apple-wallet-button', [])
+      )
+    ).resolves.toMatchObject({ code: 'VPPW_1001' });
+    await expect(
+      setupPushProvisionSDK('payload', [
+        walletSetup('APPLE', 'no-such-button', []),
+        walletSetup('GOOGLE', 'add-to-google-wallet-button', []),
+      ])
+    ).resolves.toMatchObject({
+      APPLE: { status: 'SETUP_FAILURE', code: 'VPPW_ERROR_002' },
+      GOOGLE: { status: 'SETUP_SUCCESS', code: 'VPPW_2001' },
+    });
+
+    await sdk.logout();
+    await expect(
+      setupPushProvisionSDK('payload', [
+        walletSetup('APPLE', 'add-to-apple-wallet-button', []),
+      ])
+    ).resolves.toEqual({
+      error: {
+        code: 'VW_ERROR_427',
+        message: expect.any(String) as string,
+        correlationId: sdk.getCorrelationId(),
+      },
+    });
   });
 
   it('rejects wallet calls outside a session and reports errors to onError', async () => {

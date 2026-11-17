@@ -49,3 +49,11 @@ export const PROVISIONING_SUCCESS_CODES = [
 ] as const;
 
 export const PROVISIONING_PARTIAL_CODES = ['VPPW_2005', 'VPPW_2006'] as const;
+
+export const PROVISIONING_UNKNOWN_CODES = [
+  'VPPW_1201',
+  'VPPW_110001',
+  'VPPW_110002',
+] as const;
+
+export const VISA_SETUP_FAILURE = 'SETUP_FAILURE';
