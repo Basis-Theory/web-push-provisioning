@@ -19,14 +19,16 @@ The mock never ships a secret. Set the tenant's test Signature Secret from the p
 
 `WebSDKMockConfig`, when defined before the script loads, is read as the initial configuration. `WebSDK.mock.reset()` restores the defaults. `WebSDK.mock.config` reports the current options without the secret. Use a dedicated test secret on a TEST tenant only: any script on the page can mint nonces for it.
 
-| Option            | Default                                   | Purpose                                                                                                     |
-| ----------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `signatureSecret` | none, required                            | HMAC key for the nonce. Must match the tenant's active `web` secret.                                        |
-| `scenario`        | `success`                                 | See below.                                                                                                  |
-| `nonceTtlMs`      | `300000`                                  | Lifetime written into the nonce `iat` and `exp` headers.                                                    |
-| `resultDelayMs`   | `0`                                       | Delay before a wallet button click reports its result.                                                      |
-| `wallets`         | Apple and Google, `ELIGIBLE`              | What `getSupportedWallets` returns.                                                                         |
-| `results`         | `VPPW_1200` for Apple, `VPPW_2002` Google | Per-wallet result passed to `provisioningResultCallback`. Use `{ error: { code, message } }` for a failure. |
+| Option            | Default                                  | Purpose                                                                                                     |
+| ----------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `signatureSecret` | none, required                           | HMAC key for the nonce. Must match the tenant's active `web` secret.                                        |
+| `scenario`        | `success`                                | See below.                                                                                                  |
+| `nonceTtlMs`      | `300000`                                 | Lifetime written into the nonce `iat` and `exp` headers.                                                    |
+| `resultDelayMs`   | `0`                                      | Delay before a wallet button click reports its result.                                                      |
+| `wallets`         | Apple and Google, `ELIGIBLE`             | What `getSupportedWallets` returns.                                                                         |
+| `results`         | `VPPW_1200` for Apple; Google by options | Per-wallet result passed to `provisioningResultCallback`. Use `{ error: { code, message } }` for a failure. |
+
+Without a configured Google result, the mock answers by the setup options: `VPPW_2002` for the device only, `VPPW_2003` for the Google account only, `VPPW_2004` for both.
 
 Configure a result as `{ code, message }`; the mock delivers it in Visa's shape. Apple Wallet gets `{ result: { code, message } }` or `{ error: { code, message, correlationId } }`. Google Wallet gets `{ result: { resultCodes: [...], nonFatalErrors: [...] } }` or `{ error: { correlationId, errorCodes: [...] } }`.
 

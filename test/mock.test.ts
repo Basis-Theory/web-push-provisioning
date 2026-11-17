@@ -198,6 +198,21 @@ describe('mock Visa web SDK', () => {
     ]);
   });
 
+  it('answers Google by the account and device options', async () => {
+    const { sdk } = await start();
+    const results: ProvisioningResult[] = [];
+    const setup = walletSetup('GOOGLE', 'add-to-google-wallet-button', results);
+    Object.assign(setup.options, { provisionCardToGoogleAccount: true });
+
+    await sdk.pushProvisioningSdk.setupPushProvisionSDK('payload', [setup]);
+    document.getElementById('add-to-google-wallet-button')!.click();
+    await tick();
+
+    expect(results).toMatchObject([
+      { result: { resultCodes: [{ code: 'VPPW_2004' }] } },
+    ]);
+  });
+
   it('delivers a configured error result with a correlation id', async () => {
     WebSDK.mock.configure({
       results: {

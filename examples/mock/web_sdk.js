@@ -38,7 +38,6 @@
     ],
     results: {
       APPLE: { code: 'VPPW_1200', message: 'Card added to Apple Wallet' },
-      GOOGLE: { code: 'VPPW_2002', message: 'Card added to Google Wallet' },
     },
   });
 
@@ -179,12 +178,37 @@
       return null;
     };
 
+    const googleResult = (walletOptions) => {
+      const account = walletOptions.provisionCardToGoogleAccount === true;
+      const device = walletOptions.provisionDeviceToken !== false;
+      if (account && device) {
+        return {
+          code: 'VPPW_2004',
+          message: 'Card Provisioning to Device and Google Account successful.',
+        };
+      }
+      return account
+        ? {
+            code: 'VPPW_2003',
+            message: 'Card Provisioning to Google Account successful.',
+          }
+        : {
+            code: 'VPPW_2002',
+            message: 'Card Provisioning to Device successful.',
+          };
+    };
+
     // Apple reports one code; Google reports arrays.
-    const deliver = (wallet, callback) => {
+    const deliver = (wallet, walletOptions) => {
+      const callback = walletOptions.provisioningResultCallback;
       if (typeof callback !== 'function') {
         return;
       }
-      const configured = config.results[wallet] || {};
+      const configured =
+        config.results[wallet] ||
+        (wallet === SUPPORTED_WALLETS.GOOGLE
+          ? googleResult(walletOptions)
+          : {});
       const correlationId = state.correlationId;
       const entry = configured.error || configured;
       const code = { code: entry.code, message: entry.message };
@@ -275,7 +299,7 @@
           );
           const handler = () => {
             global.setTimeout(
-              () => deliver(wallet, walletOptions.provisioningResultCallback),
+              () => deliver(wallet, walletOptions),
               config.resultDelayMs
             );
           };
