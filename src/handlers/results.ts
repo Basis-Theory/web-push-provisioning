@@ -79,8 +79,7 @@ export const mapProvisioningResult = (
 ): ProvisioningResult => {
   const raw = result ?? {};
   const { error } = raw;
-  // The mock deployed before it matched Visa reports the result unwrapped.
-  const outcome = raw.result ?? raw;
+  const outcome = raw.result ?? {};
 
   const entries = reported(
     error ? (error.errorCodes ?? [error]) : (outcome.resultCodes ?? [outcome])

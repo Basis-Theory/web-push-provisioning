@@ -29,7 +29,7 @@ export type VisaProvisioningOutcome = VisaResultCode & {
  * or `error`. Apple Wallet reports a single `code` and `message`; Google
  * Wallet reports arrays (`resultCodes`, `errorCodes`).
  */
-export type VisaProvisioningResult = VisaProvisioningOutcome & {
+export type VisaProvisioningResult = {
   result?: VisaProvisioningOutcome;
   error?: VisaProvisioningError;
 };

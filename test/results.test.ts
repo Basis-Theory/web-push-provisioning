@@ -116,20 +116,6 @@ describe('mapProvisioningResult', () => {
     ).toMatchObject({ success: false, status: 'error' });
   });
 
-  it('accepts the unwrapped result of the previously deployed mock', () => {
-    expect(
-      mapProvisioningResult('APPLE', {
-        code: 'VPPW_1200',
-        message: 'm',
-        correlationId: 'abc_VMCP',
-      })
-    ).toMatchObject({
-      success: true,
-      code: 'VPPW_1200',
-      correlationId: 'abc_VMCP',
-    });
-  });
-
   it('treats a missing or empty result as an error', () => {
     expect(mapProvisioningResult('APPLE', undefined)).toMatchObject({
       success: false,
