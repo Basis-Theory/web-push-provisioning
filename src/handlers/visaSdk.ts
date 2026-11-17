@@ -8,19 +8,40 @@ export type VisaSupportedWallet = {
   walletStatus?: string;
 };
 
-export type VisaProvisioningError = {
+export type VisaResultCode = {
   code?: string;
   message?: string;
-  correlationId?: string;
 };
 
-export type VisaProvisioningResult = {
-  wallet?: string;
-  code?: string;
-  message?: string;
+export type VisaProvisioningError = VisaResultCode & {
   correlationId?: string;
+  errorCodes?: VisaResultCode[];
+};
+
+export type VisaProvisioningOutcome = VisaResultCode & {
+  correlationId?: string;
+  resultCodes?: VisaResultCode[];
+  nonFatalErrors?: VisaResultCode[];
+};
+
+/**
+ * What Visa passes to `provisioningResultCallback`: exactly one of `result`
+ * or `error`. Apple Wallet reports a single `code` and `message`; Google
+ * Wallet reports arrays (`resultCodes`, `errorCodes`).
+ */
+export type VisaProvisioningResult = VisaProvisioningOutcome & {
+  result?: VisaProvisioningOutcome;
   error?: VisaProvisioningError;
 };
+
+export type VisaWalletSetupResult = VisaResultCode & {
+  status?: 'SETUP_SUCCESS' | 'SETUP_FAILURE' | (string & {});
+};
+
+/**
+ * Setting up a list of wallets always resolves, with one entry per wallet.
+ */
+export type VisaSetupResults = Partial<Record<Wallet, VisaWalletSetupResult>>;
 
 export type VisaWalletSetupOptions = {
   buttonId: string;
@@ -41,6 +62,7 @@ export type VisaWalletSetup = {
  */
 export type VisaWebSdk = {
   render: (containerId: string) => Promise<unknown>;
+  setLocale?: (locale: string) => void;
   initialize: () => Promise<{ encNonce: string }>;
   logout: () => Promise<unknown>;
   getCorrelationId: () => string;
@@ -67,6 +89,7 @@ export type VisaWebSdkFactory = (options?: {
  */
 export type VisaSdkAdapter = {
   render: (containerId: string) => Promise<void>;
+  setLocale: (locale: string) => void;
   initialize: () => Promise<string>;
   getSupportedWallets: (
     encryptedCardPayload: string
@@ -74,7 +97,7 @@ export type VisaSdkAdapter = {
   setupPushProvisioning: (
     encryptedCardPayload: string,
     wallets: VisaWalletSetup[]
-  ) => Promise<void>;
+  ) => Promise<VisaSetupResults>;
   logout: () => Promise<void>;
   getCorrelationId: () => string | undefined;
 };
@@ -107,6 +130,7 @@ export const createVisaSdkAdapter = (
       guard(async () => {
         await sdk.render(containerId);
       }),
+    setLocale: (locale) => sdk.setLocale?.(locale),
     initialize: () =>
       guard(async () => {
         const { encNonce } = await sdk.initialize();
@@ -128,10 +152,17 @@ export const createVisaSdkAdapter = (
       }),
     setupPushProvisioning: (encryptedCardPayload, wallets) =>
       guard(async () => {
-        await sdk.pushProvisioningSdk.setupPushProvisionSDK(
+        const results = (await sdk.pushProvisioningSdk.setupPushProvisionSDK(
           encryptedCardPayload,
           wallets
-        );
+        )) as
+          (VisaSetupResults & { error?: VisaProvisioningError }) | undefined;
+
+        if (results?.error) {
+          throw toVisaSdkError(results.error);
+        }
+
+        return results ?? {};
       }),
     logout: () =>
       guard(async () => {

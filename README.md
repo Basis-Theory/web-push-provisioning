@@ -32,14 +32,18 @@ const { wallets, appleWallet, googleWallet } =
   await bt.getSupportedWallets('<CARD_TOKEN_ID>');
 
 // wallets -> [{ name: 'APPLE', logoUrl, status: 'ELIGIBLE' }, { name: 'GOOGLE', ... }]
+// status is 'ELIGIBLE', 'PROVISIONED' or 'UNSUPPORTED'
 
 // Each handler binds its button and resolves once the wallet reports back.
 appleWallet?.().then(showResult);
-googleWallet?.({ provisionDeviceToken: false }).then(showResult);
+googleWallet?.().then(showResult);
 
 function showResult(result) {
   if (result.success) {
     // Card added. Call getSupportedWallets again to refresh the status.
+  } else if (result.status === 'unknown') {
+    // Visa could not confirm the outcome: the card may still be added.
+    // Ask the cardholder to check their device before retrying.
   } else {
     // result.status is 'partial' or 'error'; log result.correlationId for Visa support.
   }
@@ -56,6 +60,7 @@ The API key must be a Basis Theory session key or public key. Private keys must 
 | `appId`            | Visa AppID issued for the tenant. Required for `sandbox` and `production`.       |
 | `apiBaseUrl`       | Overrides the Basis Theory API host.                                             |
 | `region`           | `us` or `eu`; selects a regional API host. `apiBaseUrl` takes precedence.        |
+| `locale`           | Language for Google Wallet's window, for example `en-US`.                        |
 | `visaSdkUrl`       | Overrides the Visa script URL, for example to point at a local copy of the mock. |
 | `disableTelemetry` | Disables SDK telemetry.                                                          |
 
@@ -70,26 +75,30 @@ Returns `{ wallets, appleWallet, googleWallet }`. A handler is present only when
 
 ### Wallet handlers
 
-Call a handler before the cardholder clicks, not from the click: it binds the button through the Visa SDK and resolves with a `ProvisioningResult` when the wallet flow completes.
+Call a handler before the cardholder clicks, not from the click: it binds the button through the Visa SDK and resolves with a `ProvisioningResult` when the wallet flow completes. Call both handlers together, as in the example above: handlers called in the same tick are set up with a single Visa call.
 
 | Option                         | Wallet | Description                                                                 |
 | ------------------------------ | ------ | --------------------------------------------------------------------------- |
 | `buttonId`                     | both   | Defaults to `add-to-apple-wallet-button` and `add-to-google-wallet-button`. |
-| `provisionCardToGoogleAccount` | Google | Add the card to the Google account. Defaults to `true`.                     |
+| `provisionCardToGoogleAccount` | Google | Also save the card to the Google account. Defaults to `false`.              |
 | `provisionDeviceToken`         | Google | Add the card to the cardholder's Android devices. Defaults to `true`.       |
 
-At least one of the two Google options must stay `true`. A handler rejects with a `VisaSdkError` when setup fails before the wallet flow starts (for example `VPPW_ERROR_002` when the button is not in the DOM).
+At least one of the two Google options must stay `true`. `provisionCardToGoogleAccount` shares the card number with Google: enable it only when Visa has configured it for your program and your page carries the cardholder disclosures and consent it requires. A handler rejects with a `VisaSdkError` when Visa fails to set its wallet up (for example `VPPW_ERROR_002` when the button is not in the DOM); the other wallet's handler is not affected.
 
 `ProvisioningResult`:
 
-| Field           | Description                                                                                                         |
-| --------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `success`       | `true` only when Visa reported the card as added (`VPPW_1200`, `VPPW_1206`, `VPPW_2002`, `VPPW_2003`, `VPPW_2004`). |
-| `status`        | `success`, `partial` (`VPPW_2005`, `VPPW_2006`) or `error`.                                                         |
-| `code`          | Visa result or error code.                                                                                          |
-| `message`       | Visa message.                                                                                                       |
-| `correlationId` | Visa correlation id; Visa support needs it.                                                                         |
-| `wallet`        | `APPLE` or `GOOGLE`.                                                                                                |
+| Field            | Description                                                                                                         |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `success`        | `true` only when Visa reported the card as added (`VPPW_1200`, `VPPW_1206`, `VPPW_2002`, `VPPW_2003`, `VPPW_2004`). |
+| `status`         | `success`, `partial` (`VPPW_2005`, `VPPW_2006`), `unknown` (`VPPW_1201`, `VPPW_110001`, `VPPW_110002`) or `error`.  |
+| `code`           | First Visa result or error code.                                                                                    |
+| `message`        | Visa message for `code`.                                                                                            |
+| `codes`          | Every code Visa reported. Google Wallet can report more than one.                                                   |
+| `nonFatalErrors` | Problems Google Wallet reported alongside a result that still went through.                                         |
+| `correlationId`  | Visa correlation id; Visa support needs it.                                                                         |
+| `wallet`         | `APPLE` or `GOOGLE`.                                                                                                |
+
+`unknown` means Visa could not confirm the outcome and the card may still reach the device, so do not present it as a failure. `VPPW_1206` means the card was added to some of the Apple devices the cardholder selected.
 
 Once any wallet reports a result the Visa session ends (`logout()`), so the other wallet's handler stays pending and the page should call `getSupportedWallets` again. The session also ends when the page is hidden or unloaded, and on an explicit `bt.logout()`.
 

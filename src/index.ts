@@ -35,6 +35,11 @@ export type ConfigOptions = {
    */
   region?: string;
   /**
+   * Language for Google Wallet's window, for example `en-US`. Apple Wallet
+   * uses the browser's language.
+   */
+  locale?: string;
+  /**
    * Overrides the Visa script URL, for example to load a local mock.
    */
   visaSdkUrl?: string;
@@ -113,6 +118,7 @@ const BasisTheoryPushProvisioning = (
           );
         })
       ),
+    locale: configOptions?.locale,
     requestEncryptedCardPayload: createRequestEncryptedCardPayload(http),
     logger,
   });
@@ -149,6 +155,7 @@ export {
   DEFAULT_BUTTON_IDS,
   PROVISIONING_PARTIAL_CODES,
   PROVISIONING_SUCCESS_CODES,
+  PROVISIONING_UNKNOWN_CODES,
   VISA_SDK_CONTAINER_ID,
   VISA_SDK_MOCK_URL,
   WALLETS,
@@ -160,7 +167,9 @@ export type {
 } from '~src/handlers/results';
 export type {
   VisaProvisioningResult,
+  VisaResultCode,
   VisaSdkAdapter,
+  VisaSetupResults,
   VisaSupportedWallet,
   VisaWalletSetup,
   VisaWalletSetupOptions,

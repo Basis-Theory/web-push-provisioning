@@ -61,6 +61,7 @@ describe('wallet flow against the mock Visa web SDK', () => {
     });
 
   const click = async (id: string) => {
+    await tick();
     document.getElementById(id)!.click();
     await tick();
   };
@@ -129,6 +130,8 @@ describe('wallet flow against the mock Visa web SDK', () => {
       status: 'success',
       code: 'VPPW_1200',
       message: expect.any(String) as string,
+      codes: ['VPPW_1200'],
+      nonFatalErrors: [],
       correlationId: expect.stringMatching(/_VMCP$/u) as string,
     });
 
@@ -159,6 +162,48 @@ describe('wallet flow against the mock Visa web SDK', () => {
     expect(settled).toBe(false);
   });
 
+  it('sets up both wallets in one Visa call and passes the locale', async () => {
+    const captured = captureSdk();
+
+    try {
+      const bt = BasisTheoryPushProvisioning('key_test', {
+        environment: 'mock',
+        apiBaseUrl: 'https://api.flock-dev.com',
+        disableTelemetry: true,
+        locale: 'es-ES',
+      });
+      const locales: string[] = [];
+      const real = (window as unknown as { WebSDK: VisaWebSdkFactory }).WebSDK;
+      (window as unknown as { WebSDK: unknown }).WebSDK = ((options) => {
+        const sdk = real(options);
+        sdk.setLocale = (locale) => locales.push(locale);
+        return sdk;
+      }) as VisaWebSdkFactory;
+
+      const { appleWallet, googleWallet } = await bt.getSupportedWallets('t');
+      const setups: unknown[] = [];
+      const sdk = captured.instances[0].pushProvisioningSdk;
+      const { setupPushProvisionSDK } = sdk;
+      sdk.setupPushProvisionSDK = (payload, wallets) => {
+        setups.push(wallets);
+        return setupPushProvisionSDK(payload, wallets);
+      };
+
+      void appleWallet!();
+      void googleWallet!();
+      await tick();
+
+      expect(locales).toEqual(['es-ES']);
+      expect(setups).toHaveLength(1);
+      expect(setups[0]).toMatchObject([
+        { wallet: 'APPLE' },
+        { wallet: 'GOOGLE' },
+      ]);
+    } finally {
+      captured.restore();
+    }
+  });
+
   it('passes the Google options and button id to the Visa SDK', async () => {
     const captured = captureSdk();
 
@@ -180,10 +225,11 @@ describe('wallet flow against the mock Visa web SDK', () => {
       ).rejects.toThrow('At least one of');
       expect(setups).toEqual([]);
 
-      void googleWallet!({
-        buttonId: 'custom-google-button',
-        provisionDeviceToken: false,
-      });
+      await expect(
+        googleWallet!({ provisionDeviceToken: false })
+      ).rejects.toThrow('At least one of');
+
+      void googleWallet!({ buttonId: 'custom-google-button' });
       await tick();
 
       expect(setups).toEqual([
@@ -192,8 +238,8 @@ describe('wallet flow against the mock Visa web SDK', () => {
             wallet: 'GOOGLE',
             options: {
               buttonId: 'custom-google-button',
-              provisionCardToGoogleAccount: true,
-              provisionDeviceToken: false,
+              provisionCardToGoogleAccount: false,
+              provisionDeviceToken: true,
               provisioningResultCallback: expect.any(Function) as unknown,
             },
           },
@@ -324,8 +370,8 @@ describe('wallet flow against the mock Visa web SDK', () => {
       },
     });
 
-    const pending = googleWallet!({ provisionDeviceToken: false }).then((r) =>
-      results.push(r)
+    const pending = googleWallet!({ provisionCardToGoogleAccount: true }).then(
+      (r) => results.push(r)
     );
     await click('add-to-google-wallet-button');
     await pending;
@@ -358,6 +404,50 @@ describe('wallet flow against the mock Visa web SDK', () => {
       status: 'error',
       code: 'VPPW_ERROR_2007',
       message: 'Declined',
+      codes: ['VPPW_ERROR_2007'],
+      nonFatalErrors: [],
+      correlationId: expect.stringMatching(/_VMCP$/u) as string,
+    });
+  });
+
+  it('resolves an unconfirmed Apple result as unknown', async () => {
+    WebSDK.mock.configure({
+      results: { APPLE: { code: 'VPPW_1201', message: 'Status Unknown.' } },
+    });
+    const { appleWallet } = await client().getSupportedWallets('t');
+
+    const pending = appleWallet!();
+    await click('add-to-apple-wallet-button');
+
+    await expect(pending).resolves.toMatchObject({
+      success: false,
+      status: 'unknown',
+      code: 'VPPW_1201',
+    });
+  });
+
+  it('rejects only the wallet whose setup failed', async () => {
+    const { appleWallet, googleWallet } =
+      await client().getSupportedWallets('t');
+
+    const google = googleWallet!();
+    await expect(appleWallet!({ buttonId: 'nope' })).rejects.toMatchObject({
+      name: 'VisaSdkError',
+      code: 'VPPW_ERROR_002',
+    });
+    await click('add-to-google-wallet-button');
+
+    await expect(google).resolves.toMatchObject({ success: true });
+  });
+
+  it('rejects the handler when Visa fails the whole setup', async () => {
+    WebSDK.mock.configure({ nonceTtlMs: 200 });
+    const { appleWallet } = await client().getSupportedWallets('t');
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    await expect(appleWallet!()).rejects.toMatchObject({
+      name: 'VisaSdkError',
+      code: 'VDC_ERROR_403',
       correlationId: expect.stringMatching(/_VMCP$/u) as string,
     });
   });
