@@ -11,6 +11,7 @@ import {
 } from '~src/handlers/results';
 import {
   VisaSdkAdapter,
+  VisaSetupResults,
   VisaSupportedWallet,
   VisaWalletSetup,
   VisaWalletSetupOptions,
@@ -19,7 +20,8 @@ import type { EncryptedCardPayloadRequest } from '~src/session';
 import { toVisaSdkError } from '~src/utils/errors';
 import type { Logger } from '~src/utils/logging';
 
-export type WalletStatus = 'ELIGIBLE' | 'ALREADY_PROVISIONED' | (string & {});
+export type WalletStatus =
+  'ELIGIBLE' | 'PROVISIONED' | 'UNSUPPORTED' | (string & {});
 
 export type SupportedWallet = {
   name: Wallet;
@@ -89,10 +91,12 @@ export type WalletFlow = {
 type Session = {
   encryptedCardPayload: string;
   setups: Map<Wallet, VisaWalletSetup>;
+  pendingSetup?: Promise<VisaSetupResults>;
 };
 
 type WalletFlowDependencies = {
   getAdapter: () => Promise<VisaSdkAdapter>;
+  locale?: string;
   requestEncryptedCardPayload: (
     request: EncryptedCardPayloadRequest
   ) => Promise<{ encryptedCardPayload: string }>;
@@ -141,6 +145,7 @@ const googleSetupOptions = (
 
 export const createWalletFlow = ({
   getAdapter,
+  locale,
   requestEncryptedCardPayload,
   logger,
 }: WalletFlowDependencies): WalletFlow => {
@@ -195,6 +200,24 @@ export const createWalletFlow = ({
     return adapter;
   };
 
+  // Handlers called in the same tick share one Visa setup call: the wallet
+  // scripts do not tolerate being initialized twice on the same button.
+  const setUp = (
+    current: Session,
+    sdk: VisaSdkAdapter
+  ): Promise<VisaSetupResults> => {
+    current.pendingSetup ??= Promise.resolve().then(() => {
+      current.pendingSetup = undefined;
+
+      return sdk.setupPushProvisioning(
+        current.encryptedCardPayload,
+        Array.from(current.setups.values())
+      );
+    });
+
+    return current.pendingSetup;
+  };
+
   const createHandler =
     (wallet: Wallet, current: Session) =>
     async (
@@ -243,11 +266,7 @@ export const createWalletFlow = ({
           },
         });
 
-        sdk
-          .setupPushProvisioning(
-            current.encryptedCardPayload,
-            Array.from(current.setups.values())
-          )
+        setUp(current, sdk)
           .then((results) => {
             const setup = results[wallet];
 
@@ -285,6 +304,10 @@ export const createWalletFlow = ({
     await logout();
     const sdk = await ensureRendered(options.containerId);
     attachUnloadListener();
+
+    if (locale) {
+      sdk.setLocale(locale);
+    }
 
     const nonce = await sdk.initialize();
 

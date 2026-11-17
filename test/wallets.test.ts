@@ -61,6 +61,7 @@ describe('wallet flow against the mock Visa web SDK', () => {
     });
 
   const click = async (id: string) => {
+    await tick();
     document.getElementById(id)!.click();
     await tick();
   };
@@ -159,6 +160,48 @@ describe('wallet flow against the mock Visa web SDK', () => {
     });
     await click('add-to-apple-wallet-button');
     expect(settled).toBe(false);
+  });
+
+  it('sets up both wallets in one Visa call and passes the locale', async () => {
+    const captured = captureSdk();
+
+    try {
+      const bt = BasisTheoryPushProvisioning('key_test', {
+        environment: 'mock',
+        apiBaseUrl: 'https://api.flock-dev.com',
+        disableTelemetry: true,
+        locale: 'es-ES',
+      });
+      const locales: string[] = [];
+      const real = (window as unknown as { WebSDK: VisaWebSdkFactory }).WebSDK;
+      (window as unknown as { WebSDK: unknown }).WebSDK = ((options) => {
+        const sdk = real(options);
+        sdk.setLocale = (locale) => locales.push(locale);
+        return sdk;
+      }) as VisaWebSdkFactory;
+
+      const { appleWallet, googleWallet } = await bt.getSupportedWallets('t');
+      const setups: unknown[] = [];
+      const sdk = captured.instances[0].pushProvisioningSdk;
+      const { setupPushProvisionSDK } = sdk;
+      sdk.setupPushProvisionSDK = (payload, wallets) => {
+        setups.push(wallets);
+        return setupPushProvisionSDK(payload, wallets);
+      };
+
+      void appleWallet!();
+      void googleWallet!();
+      await tick();
+
+      expect(locales).toEqual(['es-ES']);
+      expect(setups).toHaveLength(1);
+      expect(setups[0]).toMatchObject([
+        { wallet: 'APPLE' },
+        { wallet: 'GOOGLE' },
+      ]);
+    } finally {
+      captured.restore();
+    }
   });
 
   it('passes the Google options and button id to the Visa SDK', async () => {

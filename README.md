@@ -34,6 +34,7 @@ const { wallets, appleWallet, googleWallet } =
   await bt.getSupportedWallets('<CARD_TOKEN_ID>');
 
 // wallets -> [{ name: 'APPLE', logoUrl, status: 'ELIGIBLE' }, { name: 'GOOGLE', ... }]
+// status is 'ELIGIBLE', 'PROVISIONED' or 'UNSUPPORTED'
 
 // Each handler binds its button and resolves once the wallet reports back.
 appleWallet?.().then(showResult);
@@ -61,6 +62,7 @@ The API key must be a Basis Theory session key or public key. Private keys must 
 | `appId`            | Visa AppID issued for the tenant. Required for `sandbox` and `production`.       |
 | `apiBaseUrl`       | Overrides the Basis Theory API host.                                             |
 | `region`           | `us` or `eu`; selects a regional API host. `apiBaseUrl` takes precedence.        |
+| `locale`           | Language for Google Wallet's window, for example `en-US`.                        |
 | `visaSdkUrl`       | Overrides the Visa script URL, for example to point at a local copy of the mock. |
 | `disableTelemetry` | Disables SDK telemetry.                                                          |
 
@@ -75,7 +77,7 @@ Returns `{ wallets, appleWallet, googleWallet }`. A handler is present only when
 
 ### Wallet handlers
 
-Call a handler before the cardholder clicks, not from the click: it binds the button through the Visa SDK and resolves with a `ProvisioningResult` when the wallet flow completes.
+Call a handler before the cardholder clicks, not from the click: it binds the button through the Visa SDK and resolves with a `ProvisioningResult` when the wallet flow completes. Call both handlers together, as in the example above: handlers called in the same tick are set up with a single Visa call.
 
 | Option                         | Wallet | Description                                                                 |
 | ------------------------------ | ------ | --------------------------------------------------------------------------- |

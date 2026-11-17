@@ -62,6 +62,7 @@ export type VisaWalletSetup = {
  */
 export type VisaWebSdk = {
   render: (containerId: string) => Promise<unknown>;
+  setLocale?: (locale: string) => void;
   initialize: () => Promise<{ encNonce: string }>;
   logout: () => Promise<unknown>;
   getCorrelationId: () => string;
@@ -88,6 +89,7 @@ export type VisaWebSdkFactory = (options?: {
  */
 export type VisaSdkAdapter = {
   render: (containerId: string) => Promise<void>;
+  setLocale: (locale: string) => void;
   initialize: () => Promise<string>;
   getSupportedWallets: (
     encryptedCardPayload: string
@@ -128,6 +130,7 @@ export const createVisaSdkAdapter = (
       guard(async () => {
         await sdk.render(containerId);
       }),
+    setLocale: (locale) => sdk.setLocale?.(locale),
     initialize: () =>
       guard(async () => {
         const { encNonce } = await sdk.initialize();

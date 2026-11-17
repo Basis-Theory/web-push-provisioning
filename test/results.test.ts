@@ -101,6 +101,15 @@ describe('mapProvisioningResult', () => {
     });
   });
 
+  it('reads the codes Visa reports when its legacy mapping is off', () => {
+    expect(
+      mapProvisioningResult('APPLE', { result: { code: 'VW_PP_1200' } })
+    ).toMatchObject({ success: true, code: 'VW_PP_1200' });
+    expect(
+      mapProvisioningResult('APPLE', { result: { code: 'VW_PP_1201' } })
+    ).toMatchObject({ status: 'unknown' });
+  });
+
   it('never reports success for an error that carries a success code', () => {
     expect(
       mapProvisioningResult('APPLE', { error: { code: 'VPPW_1200' } })

@@ -46,7 +46,14 @@ export type ProvisioningResult = {
 const includes = (codes: readonly string[], code?: string): boolean =>
   code !== undefined && codes.includes(code);
 
-const statusOf = (code?: string): ProvisioningStatus => {
+// Visa's script reports `VPPW_*` codes by default and `VW_PP_*` when its
+// legacy mapping is off; both name the same outcomes.
+const legacyCode = (code?: string): string | undefined =>
+  code?.replace(/^VW_PP_/u, 'VPPW_');
+
+const statusOf = (reported?: string): ProvisioningStatus => {
+  const code = legacyCode(reported);
+
   if (includes(PROVISIONING_SUCCESS_CODES, code)) {
     return 'success';
   }
