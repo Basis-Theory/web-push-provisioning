@@ -133,7 +133,9 @@
         text-transform: uppercase;
       }
 
-      .wallet span:empty {
+      .wallet span:empty,
+      body[data-state='success'] .wallet,
+      body[data-state='failed'] .wallet {
         display: none;
       }
 
