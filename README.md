@@ -134,7 +134,7 @@ yarn test
 yarn lint
 ```
 
-See [`examples/`](examples/README.md) for integration samples, including a [runnable wallet page](examples/wallet/README.md) that the Playwright end-to-end test (`yarn test:e2e`) drives against the mock.
+See [`examples/`](examples/README.md) for integration samples, including a [runnable wallet page](examples/wallet/README.md).
 
 ## License
 

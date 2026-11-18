@@ -2,7 +2,7 @@ const common = {
   automock: false,
   coveragePathIgnorePatterns: ['test', 'dist'],
   transform: { '^.+\\.(t|j)sx?$': ['@swc/jest'] },
-  testPathIgnorePatterns: ['cypress', '<rootDir>/e2e/'],
+  testPathIgnorePatterns: ['cypress'],
   roots: ['<rootDir>'],
   modulePaths: ['<rootDir>'],
   moduleNameMapper: {

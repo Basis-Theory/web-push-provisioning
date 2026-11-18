@@ -3,8 +3,6 @@
 node_modules
 dist
 coverage
-test-results
-playwright-report
 cypress/screenshots
 cypress/downloads
 .nvmrc
