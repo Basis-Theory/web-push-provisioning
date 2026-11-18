@@ -13,7 +13,7 @@ A runnable page that adds a card to Apple Wallet or Google Wallet with `@basis-t
 You need a TEST tenant enabled for push provisioning, with a push provisioning source, `web` credentials configured for the sandbox environment and BIN details enrichment turned on (the payload needs the card's funding type). Basis Theory sets these up for the tenant. You also need two applications:
 
 - a public application, used by the page to create a session;
-- a private application with `token:create` and `token:use`, used by the server to create a sample card token and authorize the session.
+- a private application with `token:create` and `token:card:push-provision`, used by the server to create a sample card token and authorize the session.
 
 ```bash
 yarn install
@@ -43,7 +43,7 @@ With the mock, the Signature Secret is sent to the browser. Use a dedicated test
 ## What the page shows
 
 1. **Strong authentication comes first.** The Sign in button stands in for your portal's login. Start provisioning only for an authenticated member.
-2. **Session.** The page creates a Basis Theory session with the public key and sends its `nonce` to the backend. The backend authorizes the session with a `token:use` rule scoped to the one card token, so the session key cannot generate a payload for any other card.
+2. **Session.** The page creates a Basis Theory session with the public key and sends its `nonce` to the backend. The backend authorizes the session with a `token:card:push-provision` rule scoped to the one card token by its id, so the session key cannot generate a payload for any other card.
 3. **Wallets.** `getSupportedWallets` loads the Visa script into the `web_sdk_container_id` element, exchanges Visa's nonce for an encrypted card payload and returns the wallets the card can be added to.
 4. **Buttons.** `add-to-apple-wallet-button` and `add-to-google-wallet-button` are always in the DOM with those ids, and both wallets are always shown: the member may be adding the card to a different device. The Visa SDK binds the click, so the page calls each wallet handler before the click and only enables the button afterwards.
 5. **Result.** Each handler resolves with a `ProvisioningResult`. On success the page shows a confirmation; on a partial, unknown or failed result it shows the code, the correlation id and a retry. Either way the Visa session has ended, so the next attempt starts again from a new session.

@@ -93,7 +93,7 @@ const authorizeSession = async (nonce) => {
         description: 'Push provisioning for one card',
         priority: 1,
         transform: 'reveal',
-        permissions: ['token:use'],
+        permissions: ['token:card:push-provision'],
         conditions: [
           {
             attribute: 'id',
