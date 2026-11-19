@@ -1,4 +1,7 @@
-import { PUSH_PROVISIONING_PATH } from '~src/constants';
+import {
+  BT_CORRELATION_ID_HEADER_NAME,
+  PUSH_PROVISIONING_PATH,
+} from '~src/constants';
 import { isApiError, processApiError } from '~src/utils/errors';
 import type { HttpClient } from '~src/utils/http';
 
@@ -10,6 +13,11 @@ export type EncryptedCardPayloadRequest = {
 
 export type EncryptedCardPayloadResponse = {
   encryptedCardPayload: string;
+  /**
+   * Trace id the Basis Theory API answered with; it identifies the request in
+   * Basis Theory's logs.
+   */
+  traceId?: string;
 };
 
 export const createRequestEncryptedCardPayload =
@@ -39,5 +47,8 @@ export const createRequestEncryptedCardPayload =
       encrypted_card_payload: string;
     };
 
-    return { encryptedCardPayload };
+    return {
+      encryptedCardPayload,
+      traceId: response.headers.get(BT_CORRELATION_ID_HEADER_NAME) ?? undefined,
+    };
   };
