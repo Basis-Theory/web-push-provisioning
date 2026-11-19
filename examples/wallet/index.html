@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Add your card to a wallet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600&family=Kode+Mono:wght@600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #0b0e15;
+        --body: #2a2f3a;
+        --muted: #5a5f6c;
+        --line: rgba(11, 14, 21, 0.1);
+        --lime: #cdf75f;
+        --display: 'NeoGrotesk', 'Inter', -apple-system, sans-serif;
+        --text: 'Inter', -apple-system, 'Helvetica Neue', sans-serif;
+        --mono: 'Kode Mono', ui-monospace, Menlo, monospace;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      body {
+        background:
+          radial-gradient(
+            55% 60% at 88% 8%,
+            rgba(7, 206, 224, 0.2),
+            transparent 62%
+          ),
+          radial-gradient(
+            50% 55% at 12% 96%,
+            rgba(45, 228, 200, 0.1),
+            transparent 66%
+          ),
+          linear-gradient(215deg, #060810 0%, #0b1018 55%, #101a22 100%) fixed;
+        color: var(--body);
+        font: 500 16px/1.6 var(--text);
+        margin: 0;
+        min-height: 100vh;
+        padding: 48px 16px;
+      }
+
+      header,
+      main,
+      footer {
+        margin: 0 auto;
+        max-width: 30rem;
+      }
+
+      header {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+
+      .tag {
+        color: #a0a5b3;
+        font: 600 11px/1 var(--mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      main {
+        background: #fff;
+        border-radius: 24px;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+        padding: 40px;
+      }
+
+      h1 {
+        color: var(--ink);
+        font: 500 32px/1.15 var(--display);
+        letter-spacing: -0.02em;
+        margin: 0 0 16px;
+      }
+
+      p {
+        margin: 0 0 24px;
+      }
+
+      .pill {
+        border-radius: 999px;
+        cursor: pointer;
+        font: 600 16px/1 var(--text);
+        padding: 14px 28px;
+      }
+
+      #sign-in-button {
+        background: var(--ink);
+        border: 0;
+        color: var(--lime);
+      }
+
+      #retry-button {
+        background: none;
+        border: 1px solid rgba(11, 14, 21, 0.18);
+        color: var(--ink);
+      }
+
+      .wallet {
+        border-bottom: 1px solid var(--line);
+        min-height: 94px;
+        padding: 16px 0;
+      }
+
+      .wallet-head {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+
+      .name {
+        align-items: center;
+        color: var(--ink);
+        display: flex;
+        font-weight: 600;
+        gap: 8px;
+      }
+
+      .name img {
+        height: 24px;
+      }
+
+      .wallet button {
+        background: none;
+        border: 0;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      /* Hidden, not dimmed: Apple's badge guidelines forbid a dimmed badge. */
+      .wallet button:disabled {
+        visibility: hidden;
+      }
+
+      .chip {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font: 600 11px/1 var(--mono);
+        letter-spacing: 0.14em;
+        padding: 8px 12px;
+        text-transform: uppercase;
+      }
+
+      .chip:empty,
+      body[data-state='success'] .wallet,
+      body[data-state='failed'] .wallet {
+        display: none;
+      }
+
+      /* Placeholder: the real asset comes from Apple Business Register. */
+      #add-to-apple-wallet-button {
+        background: #000;
+        border-radius: 8px;
+        color: #fff;
+        font: 600 15px/46px var(--text);
+        height: 46px;
+        padding: 0 20px;
+      }
+
+      #add-to-google-wallet-button {
+        max-width: 300px;
+        min-width: 100px;
+      }
+
+      #add-to-google-wallet-button img {
+        display: block;
+        height: 46px;
+        max-width: 100%;
+      }
+
+      #status {
+        color: var(--muted);
+        font-size: 14px;
+        margin: 24px 0 0;
+      }
+
+      #result {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        margin-top: 24px;
+        padding: 24px;
+      }
+
+      #result-message {
+        color: var(--ink);
+        font: 500 18px/1.4 var(--display);
+        margin-bottom: 8px;
+      }
+
+      #result p:nth-child(2) {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      code {
+        color: var(--ink);
+        font:
+          500 13px/1.6 ui-monospace,
+          Menlo,
+          monospace;
+      }
+
+      body[data-state='success'] #result {
+        background: rgba(127, 214, 166, 0.14);
+        border-color: rgba(127, 214, 166, 0.6);
+      }
+
+      body[data-state='failed'] #result {
+        background: rgba(239, 138, 138, 0.12);
+        border-color: rgba(239, 138, 138, 0.6);
+      }
+
+      footer {
+        color: #71717a;
+        font-size: 13px;
+        margin-top: 24px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body data-state="signed-out">
+    <header>
+      <img alt="Basis Theory" height="28" src="/logo.svg" />
+      <span class="tag">Push provisioning example</span>
+    </header>
+
+    <main>
+      <h1>Add your card to a wallet</h1>
+
+      <section id="sign-in">
+        <p>
+          Provisioning sits behind strong authentication. This button stands in
+          for your portal's login.
+        </p>
+        <button class="pill" id="sign-in-button" type="button">Sign in</button>
+      </section>
+
+      <section id="wallets" hidden>
+        <div id="web_sdk_container_id"></div>
+
+        <div class="wallet">
+          <div class="wallet-head">
+            <span class="name">
+              <img alt="" hidden id="apple-wallet-logo" />Apple Wallet
+            </span>
+            <span class="chip" id="apple-wallet-status"></span>
+          </div>
+          <button id="add-to-apple-wallet-button" type="button" disabled>
+            Add to Apple Wallet
+          </button>
+        </div>
+        <div class="wallet">
+          <div class="wallet-head">
+            <span class="name">
+              <img alt="" hidden id="google-wallet-logo" />Google Wallet
+            </span>
+            <span class="chip" id="google-wallet-status"></span>
+          </div>
+          <button id="add-to-google-wallet-button" type="button" disabled>
+            <img
+              alt="Add to Google Wallet"
+              src="https://pay.google.com/gp/v/a/pushprovisioning/saveButtonImage?hl=en-US"
+            />
+          </button>
+        </div>
+
+        <p id="status" role="status"></p>
+
+        <div id="result" hidden>
+          <p id="result-message"></p>
+          <p>
+            Code: <code id="result-code"></code><br />
+            Correlation id: <code id="result-correlation-id"></code>
+          </p>
+          <button class="pill" id="retry-button" type="button"></button>
+        </div>
+      </section>
+    </main>
+
+    <footer>Example integration running against the mock Visa SDK.</footer>
+
+    <script src="/sdk.js"></script>
+    <script src="/wallet.js"></script>
+  </body>
+</html>

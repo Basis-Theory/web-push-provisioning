@@ -16,6 +16,7 @@
     "build": "node ./scripts/prepare.js && yarn generateTypes && parcel build --no-cache",
     "build:dev": "yarn clean && yarn generateTypes && parcel build && npx size-limit",
     "clean": "rimraf dist .parcel-cache",
+    "example": "node examples/wallet/server.mjs",
     "generateTypes": "tsc --emitDeclarationOnly",
     "lint-staged": "lint-staged",
     "lint:fix": "eslint --fix",
