@@ -17,7 +17,7 @@ The mock never ships a secret. Set the tenant's test Signature Secret from the p
 </script>
 ```
 
-`WebSDKMockConfig`, when defined before the script loads, is read as the initial configuration. `WebSDK.mock.reset()` restores the defaults. `WebSDK.mock.config` reports the current options without the secret. Use a dedicated test secret on a TEST tenant only: any script on the page can mint nonces for it.
+`WebSDKMockConfig`, when defined before the script loads, is read as the initial configuration. `WebSDK.mock.reset()` restores the defaults. `WebSDK.mock.config` reports the current options without the secret. Use a dedicated test secret on a TEST tenant only: any script on the page can mint nonces for it. Keep a separate tenant for the mock. A TEST tenant has a single sandbox credential slot, which is also where Visa-issued sandbox credentials go, and those must never reach a browser.
 
 | Option            | Default                                  | Purpose                                                                                                     |
 | ----------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
