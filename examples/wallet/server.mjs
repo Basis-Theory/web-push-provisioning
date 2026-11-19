@@ -158,7 +158,20 @@ const routes = {
   },
 };
 
+// The listener is loopback-only, but a page on another site can still reach it
+// through DNS rebinding or a cross-site request.
+const trustedHosts = [`127.0.0.1:${port}`, `localhost:${port}`];
+const isTrusted = ({ host, origin }) =>
+  trustedHosts.includes(host) &&
+  (!origin || trustedHosts.some((trusted) => origin === `http://${trusted}`));
+
 createServer(async (request, response) => {
+  if (!isTrusted(request.headers)) {
+    sendJson(response, 403, { error: 'Forbidden' });
+
+    return;
+  }
+
   const { pathname } = new URL(request.url, 'http://localhost');
   const route = routes[`${request.method} ${pathname}`];
 

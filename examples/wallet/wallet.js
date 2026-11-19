@@ -180,6 +180,16 @@
         }
       });
 
+      if (!appleWallet && !googleWallet) {
+        showOutcome({
+          state: 'failed',
+          message: 'This card cannot be added to a wallet from this browser.',
+          retryLabel: 'Try again',
+        });
+
+        return;
+      }
+
       const handlers = { APPLE: appleWallet, GOOGLE: googleWallet };
 
       Object.entries(handlers).forEach(([name, handler]) => {
