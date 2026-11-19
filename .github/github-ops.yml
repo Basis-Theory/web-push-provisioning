@@ -1,0 +1,3 @@
+# Shows production releases on the company release timeline (GitHub-ops release history).
+release_history:
+  enabled: true
