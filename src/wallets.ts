@@ -16,7 +16,10 @@ import {
   VisaWalletSetup,
   VisaWalletSetupOptions,
 } from '~src/handlers/visaSdk';
-import type { EncryptedCardPayloadRequest } from '~src/session';
+import type {
+  EncryptedCardPayloadRequest,
+  EncryptedCardPayloadResponse,
+} from '~src/session';
 import { toVisaSdkError } from '~src/utils/errors';
 import type { Logger } from '~src/utils/logging';
 
@@ -90,6 +93,7 @@ export type WalletFlow = {
 
 type Session = {
   encryptedCardPayload: string;
+  traceId?: string;
   setups: Map<Wallet, VisaWalletSetup>;
   pendingSetup?: Promise<VisaSetupResults>;
 };
@@ -99,7 +103,7 @@ type WalletFlowDependencies = {
   locale?: string;
   requestEncryptedCardPayload: (
     request: EncryptedCardPayloadRequest
-  ) => Promise<{ encryptedCardPayload: string }>;
+  ) => Promise<EncryptedCardPayloadResponse>;
   logger: Logger;
 };
 
@@ -259,6 +263,7 @@ export const createWalletFlow = ({
                 status: result.status,
                 code: result.code ?? '',
                 correlationId: result.correlationId ?? '',
+                traceId: current.traceId ?? '',
               });
 
               void logout().then(() => resolve(result));
@@ -323,10 +328,11 @@ export const createWalletFlow = ({
     initialized = true;
 
     let encryptedCardPayload: string;
+    let traceId: string | undefined;
     let supported: VisaSupportedWallet[];
 
     try {
-      ({ encryptedCardPayload } = await requestEncryptedCardPayload({
+      ({ encryptedCardPayload, traceId } = await requestEncryptedCardPayload({
         nonce,
         tokenId: cardTokenId,
         correlationId: options.correlationId,
@@ -343,7 +349,11 @@ export const createWalletFlow = ({
       throw superseded();
     }
 
-    const current: Session = { encryptedCardPayload, setups: new Map() };
+    const current: Session = {
+      encryptedCardPayload,
+      traceId,
+      setups: new Map(),
+    };
     session = current;
 
     const wallets: SupportedWallet[] = supported

@@ -6,6 +6,7 @@ const jsonResponse = (status: number, body: unknown) =>
   ({
     ok: status >= 200 && status < 300,
     status,
+    headers: new Headers({ 'BT-TRACE-ID': 'trace-1' }),
     json: () => Promise.resolve(body),
   }) as Response;
 
@@ -37,6 +38,7 @@ describe('requestEncryptedCardPayload', () => {
 
     expect(result).toEqual({
       encryptedCardPayload: 'header.payload.signature',
+      traceId: 'trace-1',
     });
 
     const [url, init] = fetchMock.mock.calls[0];

@@ -14,6 +14,7 @@ const payloadResponse = (encryptedCardPayload: string) =>
   ({
     ok: true,
     status: 200,
+    headers: new Headers({ 'BT-TRACE-ID': 'trace-1' }),
     json: () =>
       Promise.resolve({ encrypted_card_payload: encryptedCardPayload }),
   }) as Response;
@@ -137,6 +138,32 @@ describe('wallet flow against the mock Visa web SDK', () => {
 
     // The session ended: setting up again needs a new getSupportedWallets.
     await expect(appleWallet!()).rejects.toThrow('session has ended');
+  });
+
+  it('reports the result with the Visa correlation id and the API trace id', async () => {
+    const bt = BasisTheoryPushProvisioning('key_test', {
+      environment: 'mock',
+      apiBaseUrl: 'https://api.flock-dev.com',
+    });
+    const { appleWallet } = await bt.getSupportedWallets('token-1');
+
+    const pending = appleWallet!();
+    await click('add-to-apple-wallet-button');
+    const result = await pending;
+
+    const reported = fetchMock.mock.calls
+      .filter(([url]) => url.includes('datadoghq.com'))
+      .map(([, init]) => JSON.parse(init.body as string) as object);
+
+    expect(reported).toContainEqual(
+      expect.objectContaining({
+        message: 'push-provisioning-result',
+        wallet: 'APPLE',
+        code: 'VPPW_1200',
+        correlationId: result.correlationId,
+        traceId: 'trace-1',
+      })
+    );
   });
 
   it('keeps both buttons bound when both handlers are set up', async () => {
