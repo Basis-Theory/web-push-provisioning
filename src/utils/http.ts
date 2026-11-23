@@ -1,5 +1,6 @@
 import {
   API_BASE_URL,
+  API_ENVIRONMENTS,
   BT_API_KEY_HEADER_NAME,
   BT_CORRELATION_ID_HEADER_NAME,
   REGIONAL_API_BASE_URLS,
@@ -20,23 +21,13 @@ const resolveApiBaseUrlOverride = (options?: {
 };
 
 const resolveApiEnv = (baseUrl?: string): string | undefined => {
-  let host: string;
-
   try {
-    host = new URL(baseUrl ?? API_BASE_URL).hostname;
+    const host = new URL(baseUrl ?? API_BASE_URL).hostname;
+
+    return API_ENVIRONMENTS.find(([suffix]) => host.endsWith(suffix))?.[1];
   } catch {
     return undefined;
   }
-
-  if (host.endsWith('.flock-dev.com')) {
-    return 'dev';
-  }
-
-  if (host.endsWith('.btsandbox.com') || host === 'api.test.basistheory.com') {
-    return 'uat';
-  }
-
-  return host.endsWith('.basistheory.com') ? 'prod' : undefined;
 };
 
 type HttpClient = {

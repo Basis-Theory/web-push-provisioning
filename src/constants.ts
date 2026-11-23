@@ -9,6 +9,13 @@ export const REGIONAL_API_BASE_URLS: Record<string, string> = {
   us: 'https://api.us.basistheory.com',
 };
 
+export const API_ENVIRONMENTS: [hostSuffix: string, env: string][] = [
+  ['api.test.basistheory.com', 'uat'],
+  ['.btsandbox.com', 'uat'],
+  ['.flock-dev.com', 'dev'],
+  ['.basistheory.com', 'prod'],
+];
+
 export const PUSH_PROVISIONING_PATH = '/push-provisioning';
 
 export const ENVIRONMENTS = ['sandbox', 'production', 'mock'] as const;
