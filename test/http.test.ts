@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '~src/constants';
-import { resolveApiBaseUrlOverride } from '~src/utils/http';
+import { resolveApiBaseUrlOverride, resolveApiEnv } from '~src/utils/http';
 
 describe('resolveApiBaseUrlOverride', () => {
   it('returns no override when nothing is configured', () => {
@@ -41,4 +41,18 @@ describe('resolveApiBaseUrlOverride', () => {
       expect(resolveApiBaseUrlOverride({ region })).toBeUndefined();
     }
   );
+});
+
+describe('resolveApiEnv', () => {
+  it.each([
+    [undefined, 'prod'],
+    ['https://api.eu.basistheory.com', 'prod'],
+    ['https://api.test.basistheory.com', 'uat'],
+    ['https://api.btsandbox.com', 'uat'],
+    ['https://api.flock-dev.com', 'dev'],
+    ['http://localhost:3333', undefined],
+    ['not a url', undefined],
+  ])('maps %s to %s', (baseUrl, expected) => {
+    expect(resolveApiEnv(baseUrl)).toBe(expected);
+  });
 });

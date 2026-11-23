@@ -19,6 +19,26 @@ const resolveApiBaseUrlOverride = (options?: {
   return (region && REGIONAL_API_BASE_URLS[region]) || undefined;
 };
 
+const resolveApiEnv = (baseUrl?: string): string | undefined => {
+  let host: string;
+
+  try {
+    host = new URL(baseUrl ?? API_BASE_URL).hostname;
+  } catch {
+    return undefined;
+  }
+
+  if (host.endsWith('.flock-dev.com')) {
+    return 'dev';
+  }
+
+  if (host.endsWith('.btsandbox.com') || host === 'api.test.basistheory.com') {
+    return 'uat';
+  }
+
+  return host.endsWith('.basistheory.com') ? 'prod' : undefined;
+};
+
 type HttpClient = {
   post: (
     path: string,
@@ -68,5 +88,5 @@ const createHttpClient = (
   };
 };
 
-export { createHttpClient, resolveApiBaseUrlOverride };
+export { createHttpClient, resolveApiBaseUrlOverride, resolveApiEnv };
 export type { HttpClient };
