@@ -5,7 +5,11 @@ import {
   loadVisaSdkFactory,
 } from '~src/handlers/visaSdk';
 import { createRequestEncryptedCardPayload } from '~src/session';
-import { createHttpClient, resolveApiBaseUrlOverride } from '~src/utils/http';
+import {
+  createHttpClient,
+  resolveApiBaseUrlOverride,
+  resolveApiEnv,
+} from '~src/utils/http';
 import { createLogger } from '~src/utils/logging';
 import { createWalletFlow } from '~src/wallets';
 
@@ -80,15 +84,13 @@ const BasisTheoryPushProvisioning = (
   apiKey: string,
   configOptions?: ConfigOptions
 ) => {
+  const apiBaseUrl = resolveApiBaseUrlOverride(configOptions);
   const logger = createLogger({
     disableTelemetry: configOptions?.disableTelemetry ?? false,
+    env: resolveApiEnv(apiBaseUrl),
   });
 
-  const http = createHttpClient(
-    apiKey,
-    logger,
-    resolveApiBaseUrlOverride(configOptions)
-  );
+  const http = createHttpClient(apiKey, logger, apiBaseUrl);
 
   const environment: Environment = configOptions?.environment ?? 'sandbox';
   const scriptOptions = { ...configOptions, environment };

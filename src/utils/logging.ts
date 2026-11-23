@@ -17,8 +17,10 @@ const SERVICE = 'web-push-provisioning';
 
 const createLogger = ({
   disableTelemetry,
+  env,
 }: {
   disableTelemetry: boolean;
+  env?: string;
 }): Logger => {
   const log = async (
     message: string,
@@ -34,6 +36,7 @@ const createLogger = ({
       application: SERVICE,
       ddsource: SERVICE,
       service: SERVICE,
+      ...(env ? { ddtags: `env:${env}` } : {}),
       ...attributes,
       level,
       message:

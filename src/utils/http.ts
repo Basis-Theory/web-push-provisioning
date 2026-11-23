@@ -1,5 +1,6 @@
 import {
   API_BASE_URL,
+  API_ENVIRONMENTS,
   BT_API_KEY_HEADER_NAME,
   BT_CORRELATION_ID_HEADER_NAME,
   REGIONAL_API_BASE_URLS,
@@ -17,6 +18,16 @@ const resolveApiBaseUrlOverride = (options?: {
   const region = options?.region?.toLowerCase();
 
   return (region && REGIONAL_API_BASE_URLS[region]) || undefined;
+};
+
+const resolveApiEnv = (baseUrl?: string): string | undefined => {
+  try {
+    const host = new URL(baseUrl ?? API_BASE_URL).hostname;
+
+    return API_ENVIRONMENTS.find(([suffix]) => host.endsWith(suffix))?.[1];
+  } catch {
+    return undefined;
+  }
 };
 
 type HttpClient = {
@@ -68,5 +79,5 @@ const createHttpClient = (
   };
 };
 
-export { createHttpClient, resolveApiBaseUrlOverride };
+export { createHttpClient, resolveApiBaseUrlOverride, resolveApiEnv };
 export type { HttpClient };
